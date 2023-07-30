@@ -1,0 +1,14 @@
+ÀÄPUENTE
+   ÃÄMAIN  0/242  Ram=0
+   ³  ÃÄ??0??
+   ³  ÀÄCONFIG_PORTS  0/104  Ram=0
+   ³     ÀÄ@delay_ms1  0/16  Ram=2
+   ÃÄisr_TRAP  0/28  Ram=0
+   ÃÄserial_isr  0/52  Ram=3
+   ³  ÀÄENVIAR_U2  0/82  Ram=9
+   ÃÄisr_int_RDA2  0/52  Ram=3
+   ³  ÀÄENVIAR_U1  0/82  Ram=9
+   ÃÄisr_TIMER3  0/30  Ram=1
+   ÃÄisr_TBE  0/28  Ram=1
+   ÃÄisr_timer2  0/28  Ram=1
+   ÀÄisr_timer1  0/24  Ram=0

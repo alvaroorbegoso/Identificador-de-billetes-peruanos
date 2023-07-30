@@ -1,0 +1,947 @@
+CCS PCD C Compiler, Version 4.076, 44885               03-Mar-10 23:46
+
+               Filename: PUENTE.lst
+
+               ROM used: 1280 bytes (6%)
+                         Largest free fragment is 21244
+               RAM used: 263 (3%) at main() level
+                         275 (3%) worst case
+               Stack:    4 worst case (2 in main + 2 for interrupts)
+
+*
+0000:  GOTO    40E
+*
+0008:  DATA    00,02,00
+*
+001A:  DATA    7E,03,00
+*
+0022:  DATA    62,03,00
+0024:  DATA    28,03,00
+*
+002A:  DATA    6E,02,00
+002C:  DATA    46,03,00
+*
+0050:  DATA    F4,02,00
+.................... //REFERENCIA DE LA PLACA IMPRESO  12895 SAS ULTIMA 
+....................  
+.................... #include "\RAM_PORTS.h" 
+.................... #include <24FJ32GA002.h> 
+.................... //////// Standard Header file for the PIC24FJ32GA002 device //////////////// 
+.................... #device PIC24FJ32GA002 
+.................... #list 
+....................  
+....................  
+.................... #use      delay(clock=32000000) 
+*
+0396:  CP0     W0
+0398:  BTSC.B  42.1
+039A:  BRA     3A4
+039C:  REPEAT  #3E79
+039E:  NOP     
+03A0:  DEC     W0,W0
+03A2:  BRA     396
+03A4:  RETURN  
+.................... //#build(stack=0x1E00:0x1FFF) 
+....................  
+....................  
+.................... #use      fast_io(A) 
+.................... #use      fast_io(B) 
+.................... #word     CMCON=0X0630  
+.................... #word     OCDB=0X02CE 
+.................... #word     U1RXREG=0X0226 
+.................... #word     U2RXREG=0X0236 
+.................... #word     AD1PCFG=0X032C    
+.................... #word     U1BRG=0X0228 
+.................... #word     IFS1=0X0086 
+.................... #word     U1MODE=0X0220 
+.................... #word     U1STA=0X0222 
+.................... #word     U1TXREG=0X0224 
+.................... #bit      LIBRE1=U1STA.8 
+.................... #word     U2BRG=0X0238  
+.................... #word     U2MODE=0X0230 
+.................... #word     U2STA=0X0232 
+.................... #word     U2TXREG=0X0234 
+.................... #bit      ADDEN2=U1STA.5 
+.................... #bit      LIBRE2=U2STA.8 
+.................... #bit      U1OERR=U1STA.1 //BORRABLE  
+.................... #bit      U2OERR=U2STA.1 //BORRABLE 
+.................... #bit      U1FERR=U1STA.2   
+.................... #bit      U2FERR=U2STA.2  
+.................... #bit      FLAG=IFS1.14 
+.................... #bit      RIDLE1=U1STA.4 
+.................... #bit      RIDLE2=U2STA.4 
+....................  
+....................  
+.................... #define   VISUAL_A             PIN_A0  //  
+.................... #define   VISUAL_B             PIN_A1 
+.................... #define   VISUAL_C             PIN_B0  //VERDE 
+.................... #define   VISUAL_D             PIN_B1//AMARILLO 
+....................  
+....................  
+.................... char  SUMA=0; 
+*
+0444:  CLR.B   800
+.................... char  PARITY=0; 
+0446:  MOV.B   #0,W0L
+0448:  MOV.B   W0L,801
+.................... char  COMMANDO_A_ID003=0; 
+044A:  CLR.B   802
+.................... char  ARGUMENTO_A_ID003=0; 
+044C:  MOV.B   #0,W0L
+044E:  MOV.B   W0L,803
+.................... char  COMMANDO_A_ID024=0; 
+0450:  CLR.B   804
+.................... char  ARGUMENTO_A_ID024=0; 
+0452:  MOV.B   #0,W0L
+0454:  MOV.B   W0L,805
+....................  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //CON  CERO PARDAD IMPAR CON UNO PAR 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void ENVIAR_U1 (char PARIDAD , char DATO) 
+.................... {int16 CARGA_UTIL=0;int16 DUMY1RX=0;char im; char SUMA=0;char PARITY=0; 
+*
+02A2:  CLR     88C
+02A4:  CLR     88E
+02A6:  MOV.B   #0,W0L
+02A8:  MOV.B   W0L,891
+02AA:  CLR.B   892
+....................  for(im=0;im<8;im++){if(bit_test(DATO,im)){SUMA++;}} 
+02AC:  CLR.B   890
+02AE:  MOV     890,W4
+02B0:  CP.B    W4L,#8
+02B2:  BRA     C,2C4
+02B4:  MOV.B   88B,W0L
+02B6:  MOV     W0,W1
+02B8:  MOV.B   890,W0L
+02BA:  BTST.C  W1.W0
+02BC:  BRA     NC,2C0
+02BE:  INC.B   0891
+02C0:  INC.B   0890
+02C2:  BRA     2AE
+....................  if(bit_test(SUMA,0)){PARITY=1;} 
+02C4:  BTSS.B  891.0
+02C6:  BRA     2CE
+02C8:  MOV.B   #1,W0L
+02CA:  MOV.B   W0L,892
+....................  else {PARITY=0;} 
+02CC:  BRA     2D0
+02CE:  CLR.B   892
+....................  PARIDAD=PARITY; 
+02D0:  MOV.B   892,W0L
+02D2:  MOV.B   W0L,88A
+....................  if(PARIDAD==0){bit_clear(CARGA_UTIL,8);} 
+02D4:  CP0.B   88A
+02D6:  BRA     NZ,2DA
+02D8:  BCLR.B  88D.0
+....................  if(PARIDAD==1){bit_set(CARGA_UTIL,8);} 
+02DA:  MOV     88A,W4
+02DC:  CP.B    W4L,#1
+02DE:  BRA     NZ,2E2
+02E0:  BSET.B  88D.0
+....................  CARGA_UTIL=CARGA_UTIL+DATO; 
+02E2:  MOV     88A,W4
+02E4:  LSR     W4,#8,W4
+02E6:  MOV     88C,W3
+02E8:  ADD     W3,W4,W0
+02EA:  MOV     W0,88C
+....................  //while(!LIBRE1){restart_wdt();}  
+....................  U1TXREG=CARGA_UTIL;  
+02EC:  PUSH    88C
+02EE:  POP     224
+....................  //while(!LIBRE1){restart_wdt();}  
+....................  U1OERR=0; 
+02F0:  BCLR.B  222.1
+.................... } 
+02F2:  RETURN  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //RECUERDE DESHABILITAR LA RECEPCION DE DATOS PA NO PERDER TIEMPO  
+.................... //ATENDIENDO INTERRUPCIONES GENERADAS POR SI MISMO 
+.................... //COMUNICACION CON PC 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void ENVIAR_U2 (char PARIDAD , char DATO)//CONEXION PC 
+.................... {int16 CARGA_UTIL=0;int16 DUMY2RX=0;char im; char SUMA=0;char PARITY=0; 
+*
+021C:  CLR     88C
+021E:  CLR     88E
+0220:  MOV.B   #0,W0L
+0222:  MOV.B   W0L,891
+0224:  CLR.B   892
+....................  for(im=0;im<8;im++){if(bit_test(DATO,im)){SUMA++;}} 
+0226:  CLR.B   890
+0228:  MOV     890,W4
+022A:  CP.B    W4L,#8
+022C:  BRA     C,23E
+022E:  MOV.B   88B,W0L
+0230:  MOV     W0,W1
+0232:  MOV.B   890,W0L
+0234:  BTST.C  W1.W0
+0236:  BRA     NC,23A
+0238:  INC.B   0891
+023A:  INC.B   0890
+023C:  BRA     228
+....................  if(bit_test(SUMA,0)){PARITY=1;} 
+023E:  BTSS.B  891.0
+0240:  BRA     248
+0242:  MOV.B   #1,W0L
+0244:  MOV.B   W0L,892
+....................  else {PARITY=0;} 
+0246:  BRA     24A
+0248:  CLR.B   892
+....................  PARIDAD=PARITY; 
+024A:  MOV.B   892,W0L
+024C:  MOV.B   W0L,88A
+....................  if(PARIDAD==0){bit_clear(CARGA_UTIL,8);} 
+024E:  CP0.B   88A
+0250:  BRA     NZ,254
+0252:  BCLR.B  88D.0
+....................  if(PARIDAD==1){bit_set(CARGA_UTIL,8);} 
+0254:  MOV     88A,W4
+0256:  CP.B    W4L,#1
+0258:  BRA     NZ,25C
+025A:  BSET.B  88D.0
+....................  CARGA_UTIL=CARGA_UTIL+DATO; 
+025C:  MOV     88A,W4
+025E:  LSR     W4,#8,W4
+0260:  MOV     88C,W3
+0262:  ADD     W3,W4,W0
+0264:  MOV     W0,88C
+....................  //while(!LIBRE2){restart_wdt();} //PA TRABAJAR CON INTERRUPCIONES 
+....................  U2TXREG=CARGA_UTIL; 
+0266:  PUSH    88C
+0268:  POP     234
+....................  //while(!LIBRE2){restart_wdt();}  
+....................  U2OERR=0; 
+026A:  BCLR.B  232.1
+.................... } 
+026C:  RETURN  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void CONFIG_PORTS (void) 
+.................... {//COMPARADOR 
+....................  disable_interrupts(INTR_GLOBAL); 
+*
+03A6:  MOV     #E0,W4
+03A8:  MOV     W4,42
+....................  OCDB=(0b1000000000000000)     ; 
+03AA:  MOV     #8000,W4
+03AC:  MOV     W4,2CE
+....................  SET_TRIS_A(0b1111111111111100); 
+03AE:  MOV     #FFFC,W4
+03B0:  MOV     W4,2C0
+....................  SET_TRIS_B(0b1111111111001100); 
+03B2:  MOV     #FFCC,W4
+03B4:  MOV     W4,2C8
+....................  setup_vref(VREF_LOW | 14)     ; 
+03B6:  MOV     #102E,W4
+03B8:  MOV     W4,632
+....................  //setup_adc_ports(sAN4|sAN2)  ; 
+....................  AD1PCFG=(0b1111111111111111)  ; 
+03BA:  SETM    32C
+....................  CMCON=  (0b1111001111110000)  ;//AD1PCFG= 
+03BC:  MOV     #F3F0,W4
+03BE:  MOV     W4,630
+....................  //COMUNICACION CON MAQUINA 
+....................  U1MODE=(0b1000110000000110)   ;//9 BIT 19200 BAUD 
+03C0:  MOV     #8C06,W4
+03C2:  MOV     W4,220
+....................  U1BRG=51;//9600(103)-19200(51) 
+03C4:  MOV     #33,W4
+03C6:  MOV     W4,228
+....................  U1STA= (0b0001011100011111)   ; 
+03C8:  MOV     #171F,W4
+03CA:  MOV     W4,222
+....................      //=(0b0001011100111111)    ; 
+....................  //COMUNICACION CON PC 
+....................  U2MODE=(0b1000110000000110)   ; 
+03CC:  MOV     #8C06,W4
+03CE:  MOV     W4,230
+....................  U2BRG=51;//9600(103)-19200(51) 
+03D0:  MOV     #33,W4
+03D2:  MOV     W4,238
+....................  U2STA=(0b0001011100011111)    ; 
+03D4:  MOV     #171F,W4
+03D6:  MOV     W4,232
+....................  //CONFIGURANDO UN TIMER 
+....................  
+....................  setup_timer2((TMR_INTERNAL | TMR_DIV_BY_256),0x18ff); 
+03D8:  CLR     110
+03DA:  MOV     #18FF,W4
+03DC:  MOV     W4,10C
+03DE:  MOV     #A030,W4
+03E0:  MOV     W4,110
+....................  setup_timer3((TMR_INTERNAL | TMR_DIV_BY_64),0xFFFA); 
+03E2:  CLR     112
+03E4:  MOV     #FFFA,W4
+03E6:  MOV     W4,10E
+03E8:  MOV     #A020,W4
+03EA:  MOV     W4,112
+....................  setup_timer1((TMR_INTERNAL | TMR_DIV_BY_64),0x38ff); 
+03EC:  CLR     104
+03EE:  MOV     #38FF,W4
+03F0:  MOV     W4,102
+03F2:  MOV     #A020,W4
+03F4:  MOV     W4,104
+....................  
+....................  output_high(VISUAL_A); 
+03F6:  BSET.B  2C4.0
+....................  output_high(VISUAL_B); 
+03F8:  BSET.B  2C4.1
+....................  output_high(VISUAL_C); 
+03FA:  BSET.B  2CC.0
+....................  output_high(VISUAL_D); 
+03FC:  BSET.B  2CC.1
+....................  
+....................  delay_ms(900); 
+03FE:  MOV     #384,W0
+0400:  CALL    396
+....................  
+....................  output_low(VISUAL_A); 
+0404:  BCLR.B  2C4.0
+....................  output_low(VISUAL_B); 
+0406:  BCLR.B  2C4.1
+....................  output_low(VISUAL_C); 
+0408:  BCLR.B  2CC.0
+....................  output_low(VISUAL_D); 
+040A:  BCLR.B  2CC.1
+....................  
+.................... } 
+040C:  RETURN  
+....................  
+.................... #include "\ID003.h" 
+.................... enum   {NORMAL_ID003,BILLETE_ID003,INICIALIZAR};//SUPER ESTADOS 
+....................  
+.................... enum   {NULO,INTERROGAR_ESTADOS,INTERROGAR_VERSION,POWER_UP_M,SET_C0_DATA, 
+....................         SET_C1_DATA,SET_C4_DATA,SET_C5_DATA,SET_C3_DATA,SET_C6_DATA, 
+....................         SET_C7_DATA,SET_80_DATA,SET_84_DATA,SET_81_DATA,SET_83_DATA, 
+....................         SET_86_DATA,SET_87_DATA,SET_89_DATA,ACTIVAR_DATA,DESACTIVAR_DATA, 
+....................         ESCROW,ACK_DATA};//ESTADOS SIMULADOS DE  MAQUINA SIMULADA EN PROCESO DE INICIALIZACION 
+....................  
+.................... enum   {DISABLE,IDLE,ACEPTING,REJECTING,DENOM_2,DENOM_5,DENOM_10, 
+....................         DENOM_20,DENOM_50,STAKING,VALID_VENT,BILL_GUARDADO, 
+....................         HOLDING};//ESTADOS EN PROCESO DE BILL 
+....................  
+.................... char  ARGUMENT_BILL_ID003=0; 
+*
+0456:  CLR.B   806
+.................... char  ACTIVATE_ID003=0; 
+0458:  MOV.B   #0,W0L
+045A:  MOV.B   W0L,807
+.................... char  ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+045C:  MOV.B   #1,W0L
+045E:  MOV.B   W0L,808
+.................... char  ESTADOS_ID003_BILL=NULO; 
+0460:  MOV.B   #0,W0L
+0462:  MOV.B   W0L,809
+.................... char  SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+0464:  MOV.B   #2,W0L
+0466:  MOV.B   W0L,80A
+.................... char  BUFFER_ENVIO_ID003[50]={}; 
+0468:  CLR     80C
+046A:  CLR     80E
+046C:  CLR     810
+046E:  CLR     812
+0470:  CLR     814
+0472:  CLR     816
+0474:  CLR     818
+0476:  CLR     81A
+0478:  CLR     81C
+047A:  CLR     81E
+047C:  CLR     820
+047E:  CLR     822
+0480:  CLR     824
+0482:  CLR     826
+0484:  CLR     828
+0486:  CLR     82A
+0488:  CLR     82C
+048A:  CLR     82E
+048C:  CLR     830
+048E:  CLR     832
+0490:  CLR     834
+0492:  CLR     836
+0494:  CLR     838
+0496:  CLR     83A
+0498:  CLR     83C
+.................... char  BUFFER_RX_ID003[70]={}; 
+049A:  CLR     83E
+049C:  CLR     840
+049E:  CLR     842
+04A0:  CLR     844
+04A2:  CLR     846
+04A4:  CLR     848
+04A6:  CLR     84A
+04A8:  CLR     84C
+04AA:  CLR     84E
+04AC:  CLR     850
+04AE:  CLR     852
+04B0:  CLR     854
+04B2:  CLR     856
+04B4:  CLR     858
+04B6:  CLR     85A
+04B8:  CLR     85C
+04BA:  CLR     85E
+04BC:  CLR     860
+04BE:  CLR     862
+04C0:  CLR     864
+04C2:  CLR     866
+04C4:  CLR     868
+04C6:  CLR     86A
+04C8:  CLR     86C
+04CA:  CLR     86E
+04CC:  CLR     870
+04CE:  CLR     872
+04D0:  CLR     874
+04D2:  CLR     876
+04D4:  CLR     878
+04D6:  CLR     87A
+04D8:  CLR     87C
+04DA:  CLR     87E
+04DC:  CLR     880
+04DE:  CLR     882
+.................... char  CONTA_ENVIO2=0; 
+04E0:  MOV.B   #0,W0L
+04E2:  MOV.B   W0L,80B
+.................... char  PUNT_ENV_2=0; 
+04E4:  CLR.B   884
+.................... char  CONTAOR_BYTES_U2=0; 
+04E6:  MOV.B   #0,W0L
+04E8:  MOV.B   W0L,885
+.................... char  BANDER_BUFFER_INU2=0;//INDICA LA LLEGADA DE UN BYTE FC 
+04EA:  CLR.B   886
+....................  
+....................            CONST unsigned int TRAMA_B2[]             = {0xFC,0x06,0x13,0x62,0X2B,0XC9}  ; 
+....................            CONST unsigned int TRAMA_B5[]             = {0xFC,0x06,0x13,0x63,0XA2,0XD8}  ; 
+....................            CONST unsigned int TRAMA_B10[]            = {0xFC,0x06,0x13,0x64,0X1D,0XAC}  ; 
+....................            CONST unsigned int TRAMA_B20[]            = {0xFC,0x06,0x13,0x65,0X94,0XBD}  ; 
+....................            CONST unsigned int TRAMA_B50[]            = {0xFC,0x06,0x13,0x66,0X0F,0X8F}  ; 
+....................            CONST unsigned int ORDEN_PASAR[]          = {0xFC,0x05,0x42,0x39,0X036}      ; 
+....................            CONST unsigned int ESTAKANDO[]            = {0xFC,0x05,0x14,0x8A,0X01}      ; 
+....................            CONST unsigned int VENTA_VALIDA[]         = {0xFC,0x05,0x15,0x03,0X10}      ; 
+....................            CONST unsigned int GUARDADO[]             = {0xFC,0x05,0x16,0x98,0X22}      ; 
+....................            CONST unsigned int RETENIENDO[]           = {0xFC,0x05,0x19,0x6F,0XDA}      ; 
+....................                  
+....................            CONST unsigned int BILL_DESC[]       = {0xFC,0x06,0x17,0x77,0X67,0XE9}  ; 
+....................            CONST unsigned int ACEPTANDO[]       = {0xFC,0x05,0x12,0xBC,0X64}  ; 
+....................            CONST unsigned int ACTIVADO_TABLA[]  = {0XFC,0X05,0X11,0X27,0X56}  ; 
+....................            CONST unsigned int DESACTIVADO[]     = {0XFC,0X05,0X1A,0XF4,0XE8}  ;   
+....................            CONST unsigned int POWER_UP_DATA[]   = {0XFC,0X05,0X40,0X2B,0X15}  ; 
+.................... 	       CONST unsigned int INITIALIZER[]     = {0XFC,0X05,0X1B,0X7D,0XF9}  ;	                 
+....................             
+....................            CONST unsigned int SET_C0[]          = {0xFC,0x07,0xC0,0x80,0X00,0XE1,0X39}  ; 
+....................            CONST unsigned int SET_C1[]          = {0xFC,0x07,0xC1,0xFF,0X00,0X31,0X10}  ;//FF| 00| 31| 10| 
+....................            CONST unsigned int SET_C4[]          = {0xFC,0x06,0xC4,0x00,0X0C,0X9B}       ;// 00| 0C| 9B| 
+....................            CONST unsigned int SET_C5[]          = {0xFC,0x06,0xC5,0x03,0X4F,0XB0}       ;//03| 4F| B0| 
+....................            CONST unsigned int SET_C3[]          = {0xFC,0x06,0xC3,0x00,0X04,0XD6}       ;//00| 04| D6| 
+....................            CONST unsigned int SET_C6[]          = {0xFC,0x07,0xC6,0x01,0X12,0XBF,0X49}  ;//01| 12| BF| 49| 
+....................            CONST unsigned int SET_C7[]          = {0xFC,0x06,0xC7,0xFF,0X1C,0XBE}       ;//FF| 1C| BE| 
+....................  
+....................            CONST unsigned int SET_89[]          = {0xFC,0x05,0x89,0xE6,0X4E};// 
+....................            CONST unsigned int SET_80[]          = {0xFC,0x05,0x80,0x27,0XD3};// 
+....................            CONST unsigned int SET_84[]          = {0xFC,0x05,0x84,0x03,0X95};// 
+....................            CONST unsigned int SET_81[]          = {0xFC,0x05,0x81,0xAE,0XC2};// 
+....................            CONST unsigned int SET_83[]          = {0xFC,0x05,0x83,0xBC,0XE1};// 
+....................            CONST unsigned int SET_86[]          = {0xFC,0x05,0x86,0x11,0XB6};// 
+....................            CONST unsigned int SET_87[]          = {0xFC,0x05,0x87,0x98,0XA7};// 
+....................            CONST unsigned int VERSION_REQUEST[] = {0xFC,0x05,0x88,0x6F,0X5F};// 
+....................            CONST unsigned int ACK_1[]           = {0XFC,0X05,0X50,0XAA,0X05}; 
+....................            CONST unsigned int ACTIVAR_BILL[]    = {0XFC,0X06,0XC7,0XFC,0X87,0X8C}; 
+....................            CONST unsigned int DESACTIVAR_BILL[] = {0XFC,0X06,0XC7,0XFF,0X1C,0XBE}; 
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //RECEPCION TRAMAS DE BILLETERO 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void LISTO_BUFFER_ID003(void) 
+.................... {CONTAOR_BYTES_U2=0X00; 
+....................  BANDER_BUFFER_INU2=0; 
+....................  ARGUMENT_BILL_ID003==BUFFER_RX_ID003[4]; 
+....................  ESTADOS_ID003_BILL=BUFFER_RX_ID003[3]; 
+....................  
+....................  if(SUPER_ESTADOS_ID003_MQ==INICIALIZAR) 
+....................   {switch(ESTADOS_ID003_BILL)//lee el estado del billetero y modifica el estado de la maquina 
+....................           {case(POWER_UP_DATA[2]):ESTADOS_ID003_MQ=POWER_UP_M; 
+....................                                                    break; 
+....................            case(0X1B):ESTADOS_ID003_MQ=POWER_UP_M; 
+....................                                        break; 
+....................            case(ACK_1[2]):ESTADOS_ID003_MQ=SET_89_DATA; 
+....................                                            break; 
+....................            case(SET_89[2]):ESTADOS_ID003_MQ=INTERROGAR_VERSION; 
+....................                                             break; 
+....................            case(VERSION_REQUEST[2]):ESTADOS_ID003_MQ=SET_87_DATA; 
+....................                                                      break; 
+....................            case(SET_87[2]):ESTADOS_ID003_MQ=SET_86_DATA; 
+....................                                             break; 
+....................            case(SET_86[2]):ESTADOS_ID003_MQ=SET_84_DATA; 
+....................                                             break; 
+....................            case(SET_84[2]):ESTADOS_ID003_MQ=SET_83_DATA; 
+....................                                             break; 
+....................            case(SET_83[2]):ESTADOS_ID003_MQ=SET_81_DATA; 
+....................                                             break; 
+....................            case(SET_81[2]):ESTADOS_ID003_MQ=SET_80_DATA; 
+....................                                             break; 
+....................            case(SET_80[2]):ESTADOS_ID003_MQ=SET_C0_DATA; 
+....................                                             break; 
+....................            case(SET_C0[2]):ESTADOS_ID003_MQ=SET_C1_DATA; 
+....................                                             break; 
+....................            case(SET_C1[2]):ESTADOS_ID003_MQ=SET_C3_DATA; 
+....................                                             break; 
+....................            case(SET_C3[2]):ESTADOS_ID003_MQ=SET_C4_DATA; 
+....................                                             break; 
+....................            case(SET_C4[2]):ESTADOS_ID003_MQ=SET_C5_DATA; 
+....................                                             break; 
+....................            case(0X4B):ESTADOS_ID003_MQ=SET_C6_DATA; 
+....................                                        break; 
+....................            case(SET_C6[2]):ESTADOS_ID003_MQ=SET_C7_DATA; 
+....................                                             break; 
+....................            case(SET_C7[2]):ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;//AQUI MODIFICAR SUPER ESTADOS 
+....................                                             break; 
+....................            case(0X1A):ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;//AQUI MODIFICAR SUPER ESTADOS 
+....................                                        SUPER_ESTADOS_ID003_MQ=NORMAL_ID003; 
+....................                                        break; 
+....................           } 
+....................   }  
+....................  
+.................... if(SUPER_ESTADOS_ID003_MQ==NORMAL_ID003) 
+....................    {switch(ESTADOS_ID003_BILL)//lee el estado del billetero y modifica el estado de la maquina 
+....................           {case(POWER_UP_DATA[2]):SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+....................                                   ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+....................                                   break; 
+....................            case(0X1B):SUPER_ESTADOS_ID003_MQ=INICIALIZAR;//BILLETERO REPORTA INICIALIZANDO 
+....................                                   ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+....................                                   break; 
+....................            case(DESACTIVADO[2]):if(ACTIVATE_ID003==1)//SE REPORTA DESACTIVADO EL BILL PERO DEBERIA ESTAR ACTIVADO 
+....................                                    {ESTADOS_ID003_MQ=ACTIVAR_DATA;} 
+....................                                   break; 
+....................            case(ACTIVADO_TABLA[2]):if(ACTIVATE_ID003==0)//SE REPORTA DESACTIVADO EL BILL PERO DEBERIA ESTAR ACTIVADO 
+....................                                    {ESTADOS_ID003_MQ=DESACTIVAR_DATA;} 
+....................                                    break; 
+....................            case(ACTIVAR_BILL[2]):if(ESTADOS_ID003_MQ==ACTIVAR_DATA)//RESPUESTA 
+....................                                    {ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;} 
+....................                                  if(ESTADOS_ID003_MQ==DESACTIVAR_DATA)//RESPUESTA 
+....................                                    {ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;} 
+....................                                   break; 
+....................  
+....................           } 
+....................  
+....................    } 
+....................  
+....................                       
+.................... } 
+.................... //ARRIBA RESPUESTA DE BILLETERO 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //ACCION TEMPORAL DE LA MAQUINA 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void TEMPO_ID003(void) 
+.................... {char ik; 
+....................  
+....................  if(SUPER_ESTADOS_ID003_MQ==INICIALIZAR) 
+....................  {switch(ESTADOS_ID003_MQ)//estados simulados de la maquina 
+....................         {case(INTERROGAR_ESTADOS):for(ik=0;ik<ACTIVADO_TABLA[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVADO_TABLA[ik];} 
+....................                                                                       CONTA_ENVIO2=ACTIVADO_TABLA[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(POWER_UP_M):for(ik=0;ik<ACTIVADO_TABLA[1];ik++){BUFFER_ENVIO_ID003[ik]=POWER_UP_DATA[ik];} 
+....................                                                                       CONTA_ENVIO2=POWER_UP_DATA[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_89_DATA):for(ik=0;ik<SET_89[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_89[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_89[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(INTERROGAR_VERSION):for(ik=0;ik<VERSION_REQUEST[1];ik++){BUFFER_ENVIO_ID003[ik]=VERSION_REQUEST[ik];} 
+....................                                                                       CONTA_ENVIO2=VERSION_REQUEST[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_87_DATA):for(ik=0;ik<SET_87[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_87[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_87[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_86_DATA):for(ik=0;ik<SET_86[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_86[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_86[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_84_DATA):for(ik=0;ik<SET_84[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_84[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_84[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_83_DATA):for(ik=0;ik<SET_83[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_83[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_83[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_81_DATA):for(ik=0;ik<SET_81[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_81[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_81[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_80_DATA):for(ik=0;ik<SET_80[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_80[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_80[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_C0_DATA):for(ik=0;ik<SET_C0[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C0[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C0[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................  
+....................  
+....................                                                                       break; 
+....................          case(SET_C1_DATA):for(ik=0;ik<SET_C1[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C1[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C1[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_C3_DATA):for(ik=0;ik<SET_C3[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C3[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C3[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_C4_DATA):for(ik=0;ik<SET_C4[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C4[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C4[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_C5_DATA):for(ik=0;ik<SET_C5[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C5[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C5[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................          case(SET_C6_DATA):for(ik=0;ik<SET_C6[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C6[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C6[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................  
+....................          case(SET_C7_DATA):for(ik=0;ik<SET_C7[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C7[ik];} 
+....................                                                                       CONTA_ENVIO2=SET_C7[1];PUNT_ENV_2=1; 
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                                                       enable_interrupts(int_TBE2); 
+....................                                                                       break; 
+....................         } 
+....................  }  
+....................  
+.................... if(SUPER_ESTADOS_ID003_MQ==NORMAL_ID003) 
+....................    {switch(ESTADOS_ID003_MQ)//lee el estado del billetero y modifica el estado de la maquina 
+....................           {case(POWER_UP_DATA[2]):ESTADOS_ID003_MQ=POWER_UP_M; 
+....................                                   SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+....................                                   ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+....................                                   break; 
+....................            case(INTERROGAR_ESTADOS):for(ik=0;ik<ACTIVADO_TABLA[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVADO_TABLA[ik];} 
+....................                                     CONTA_ENVIO2=ACTIVADO_TABLA[1];PUNT_ENV_2=1; 
+....................                                     ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                     enable_interrupts(int_TBE2); 
+....................                                     break; 
+....................            case(ACTIVAR_DATA):for(ik=0;ik<ACTIVAR_BILL[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVAR_BILL[ik];} 
+....................                                     CONTA_ENVIO2=ACTIVAR_BILL[1];PUNT_ENV_2=1; 
+....................                                     ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                     enable_interrupts(int_TBE2); 
+....................                                     break; 
+....................            case(DESACTIVAR_DATA):for(ik=0;ik<DESACTIVAR_BILL[1];ik++){BUFFER_ENVIO_ID003[ik]=DESACTIVAR_BILL[ik];} 
+....................                                     CONTA_ENVIO2=DESACTIVAR_BILL[1];PUNT_ENV_2=1; 
+....................                                     ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+....................                                     enable_interrupts(int_TBE2); 
+....................                                     break; 
+....................           } 
+....................  
+....................    } 
+.................... } 
+.................... // 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //PROCESO DE ACTIVACION SE USA ACTIVATE_BILL REGISTRO EN 1 ACTIVADO CUANDO 
+.................... //PREGUNTO ESTADOS SI NO CORRESPONDE CON ACTIVATE  ORDENA ACTIVAR O DESACTIVAR 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... #include "\ID024.h" 
+....................  
+....................  
+.................... #use      delay(clock=32000000) 
+.................... #fuses    NOJTAG,NOWDT,PROTECT,WRT,NODEBUG,XT,PR_PLL 
+....................  
+.................... #pin_select U2TX  = PIN_B5 //COMUNICACION CON BV 
+.................... #pin_select U2RX  = PIN_B8 //COMUNICACION CON BV 
+.................... #pin_select U1TX  = PIN_B4  //COMUNICACION CON MAQUINA 
+.................... #pin_select U1RX  = PIN_B7  //COMUNICACION CON MAQUINA 
+....................  
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... #INT_ADDRERR 
+.................... void isr_TRAP () 
+.................... {while(1){#asm 
+....................           reset 
+*
+0200:  PUSH    36
+0202:  MOV     W0,[W15++]
+0204:  MOV     #2,W0
+0206:  REPEAT  #C
+0208:  MOV     [W0++],[W15++]
+....................           #endasm}   
+020A:  RESET   
+.................... } 
+020C:  BRA     20A
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //COMUNICACION CON MAQUINA 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+.................... #int_RDA   LEVEL=5 
+020E:  BCLR.B  80.3
+0210:  MOV     #1A,W0
+0212:  REPEAT  #C
+0214:  MOV     [--W15],[W0--]
+0216:  MOV     [--W15],W0
+0218:  POP     36
+021A:  RETFIE  
+.................... void serial_isr() 
+.................... {int16 FG=0;char RXREG1; 
+....................  FG=U1RXREG; 
+*
+026E:  PUSH    36
+0270:  MOV     W0,[W15++]
+0272:  MOV     #2,W0
+0274:  REPEAT  #C
+0276:  MOV     [W0++],[W15++]
+0278:  CLR     888
+....................  RXREG1=make8(FG,0); 
+027A:  PUSH    226
+027C:  POP     888
+....................  output_toggle(VISUAL_C); 
+027E:  MOV.B   888,W0L
+0280:  MOV.B   W0L,887
+....................  if(U1OERR){U1OERR=0;} 
+0282:  BTG.B   2CC.0
+....................  ENVIAR_U2(0,FG); 
+0284:  BTSS.B  222.1
+0286:  BRA     28A
+0288:  BCLR.B  222.1
+.................... } 
+028A:  CLR.B   88A
+028C:  MOV.B   888,W0L
+028E:  MOV.B   W0L,88B
+0290:  CALL    21C
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //SE ENCARGA DE LLENADO DE PILA Y DETECCION DE ERRORES 
+.................... //EJEMPLO DE UNA TRAMA VALIDA 
+.................... //FF FF FF 0D 00 00 01 20 01 02 03 01 06 DD 58 61 FE FE FE 
+.................... //COMUNICACION CON PC BUFFER_RX_PC TAMAÑO 35 BYTES 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+.................... #int_RDA2   LEVEL=5 
+0294:  BCLR.B  85.3
+0296:  MOV     #1A,W0
+0298:  REPEAT  #C
+029A:  MOV     [--W15],[W0--]
+029C:  MOV     [--W15],W0
+029E:  POP     36
+02A0:  RETFIE  
+.................... void isr_int_RDA2() 
+.................... {int FG=0;char RXREG2; 
+....................  FG=U2RXREG;  
+*
+02F4:  PUSH    36
+02F6:  MOV     W0,[W15++]
+02F8:  MOV     #2,W0
+02FA:  REPEAT  #C
+02FC:  MOV     [W0++],[W15++]
+02FE:  CLR     888
+....................  RXREG2=make8(FG,0); 
+0300:  PUSH    236
+0302:  POP     888
+....................  if(U2OERR){U2OERR=0;} 
+0304:  MOV.B   888,W0L
+0306:  MOV.B   W0L,887
+....................  output_toggle(VISUAL_B); 
+0308:  BTSS.B  232.1
+030A:  BRA     30E
+030C:  BCLR.B  232.1
+....................  ENVIAR_U1(0,FG); 
+030E:  BTG.B   2C4.1
+.................... } 
+0310:  CLR.B   88A
+0312:  MOV.B   888,W0L
+0314:  MOV.B   W0L,88B
+0316:  CALL    2A2
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //1.048SEGUNDOS LLAMAR A RUTINAS REACTIVAR ENVIOS  
+.................... //LATENCIA 3 SEGUNDOS 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... #int_TIMER3 LEVEL=5 
+031A:  BCLR.B  87.6
+031C:  MOV     #1A,W0
+031E:  REPEAT  #C
+0320:  MOV     [--W15],[W0--]
+0322:  MOV     [--W15],W0
+0324:  POP     36
+0326:  RETFIE  
+.................... void isr_TIMER3() 
+.................... {char MOLEX=0; 
+....................  output_toggle(VISUAL_D);//ENVIAR_U1(0,0x35);ENVIAR_U2(0,0x45); 
+0328:  PUSH    36
+032A:  MOV     W0,[W15++]
+032C:  MOV     #2,W0
+032E:  REPEAT  #C
+0330:  MOV     [W0++],[W15++]
+0332:  MOV.B   #0,W0L
+0334:  MOV.B   W0L,887
+.................... } 
+0336:  BTG.B   2CC.1
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //BUFFER_EMPTY 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... #int_TBE LEVEL=5 
+0338:  BCLR.B  85.0
+033A:  MOV     #1A,W0
+033C:  REPEAT  #C
+033E:  MOV     [--W15],[W0--]
+0340:  MOV     [--W15],W0
+0342:  POP     36
+0344:  RETFIE  
+.................... void isr_TBE() 
+.................... {char MOLEX=0; 
+....................   
+0346:  PUSH    36
+0348:  MOV     W0,[W15++]
+034A:  MOV     #2,W0
+034C:  REPEAT  #C
+034E:  MOV     [W0++],[W15++]
+0350:  MOV.B   #0,W0L
+0352:  MOV.B   W0L,887
+.................... } 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //env_mch buffer de envio a maquina 
+.................... //103 ms, de aqui se llaman rutinas de contadores para  
+.................... //encajarlos en sus respectivos buffers 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+.................... #int_TIMER2 LEVEL=5 
+0354:  BCLR.B  85.4
+0356:  MOV     #1A,W0
+0358:  REPEAT  #C
+035A:  MOV     [--W15],[W0--]
+035C:  MOV     [--W15],W0
+035E:  POP     36
+0360:  RETFIE  
+.................... void isr_timer2 () 
+.................... {char MOLEX=0; 
+....................   
+0362:  PUSH    36
+0364:  MOV     W0,[W15++]
+0366:  MOV     #2,W0
+0368:  REPEAT  #C
+036A:  MOV     [W0++],[W15++]
+036C:  MOV.B   #0,W0L
+036E:  MOV.B   W0L,887
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... // 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+.................... #int_TIMER1 LEVEL=5 
+0370:  BCLR.B  84.7
+0372:  MOV     #1A,W0
+0374:  REPEAT  #C
+0376:  MOV     [--W15],[W0--]
+0378:  MOV     [--W15],W0
+037A:  POP     36
+037C:  RETFIE  
+.................... void isr_timer1 () 
+.................... { 
+.................... } 
+037E:  PUSH    36
+0380:  MOV     W0,[W15++]
+0382:  MOV     #2,W0
+0384:  REPEAT  #C
+0386:  MOV     [W0++],[W15++]
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... void main(void)  
+0388:  BCLR.B  84.3
+038A:  MOV     #1A,W0
+038C:  REPEAT  #C
+038E:  MOV     [--W15],[W0--]
+0390:  MOV     [--W15],W0
+0392:  POP     36
+0394:  RETFIE  
+.................... { 
+....................  
+*
+040E:  MOV     #5444,W0
+0410:  MOV     W0,A4
+0412:  MOV     #5444,W0
+0414:  MOV     W0,A6
+0416:  MOV     #5445,W0
+0418:  MOV     W0,A8
+041A:  MOV     #4445,W0
+041C:  MOV     W0,AA
+041E:  MOV     #4544,W0
+0420:  MOV     W0,B2
+0422:  MOV     #107,W0
+0424:  MOV     W0,6A4
+0426:  MOV     #108,W0
+0428:  MOV     W0,6A6
+042A:  MOV     #503,W0
+042C:  MOV     W0,6C4
+042E:  MOV     #46,W0
+0430:  MOV.B   W0L,742
+0432:  MOV     #57,W0
+0434:  MOV.B   W0L,742
+0436:  BSET.B  742.6
+0438:  SETM    32C
+043A:  SETM    32A
+043C:  MOV     #1F80,W15
+043E:  MOV     #1FFF,W0
+0440:  MOV     W0,20
+0442:  NOP     
+.................... //pruebas 
+.................... //PASA_BUFFER_1C(); 
+.................... //CONTA_RX1=0X08; 
+.................... //PASA_BUFFER_11(); 
+....................  CONFIG_PORTS(); 
+....................  enable_interrupts(INT_TIMER3)  ; 
+*
+04EC:  CALL    3A6
+....................  enable_interrupts(INT_TIMER2)  ; 
+04F0:  BSET.B  95.0
+....................  enable_interrupts(INT_TIMER1)  ; 
+04F2:  BSET.B  94.7
+....................  enable_interrupts(INT_RDA)     ; 
+04F4:  BSET.B  94.3
+....................  enable_interrupts(INT_RDA2)    ; 
+04F6:  BSET.B  95.3
+....................  enable_interrupts(INTR_GLOBAL) ;  
+04F8:  BSET.B  97.6
+....................  
+04FA:  CLR     42
+....................   while(1) 
+....................        { 
+....................        } 
+.................... } 
+04FC:  BRA     4FC
+.................... //CAMBIO DEL 15 DICIEMBRE PARA PROCESAR EL FIN DE TRAMA ATRAVEZ DE CONTEO DE 
+.................... //BYTES Y COMPARACION CON EL CAMPO DE NUMERO DE BYTES Y TAMBIEN CON 
+.................... //LOS TRES BYTES FE CUALQUIERA DE LAS CONDICIONES QUE SE DETECTE 
+....................  
+04FE:  PWRSAV  #0
+
+Configuration Fuses:
+   Word  1L: 0F5F   NOJTAG PROTECT WRT NODEBUG ICS3 NOWDT WINDIS WPRES128 WPOSTS16
+          H: 0000  
+   Word  0L: 83F5   IOL1WAY IESO PR_PLL NOCKSFSM NOOSCIO XT I2C1SELD
+          H: 0000  

@@ -1,0 +1,122 @@
+W0      @SCRATCH
+W0L     _RETURN_
+W0      @delay_ms1.P1
+W0 -W1  @READ_ROM_MEMORY.P2
+W0      @delay_us1.P3
+W0      @delay_us2.P4
+W0      @delay_ms2.P5
+W1      @SCRATCH
+W2      @SCRATCH
+W2      @READ_ROM_MEMORY.P1
+W3      @READ_ROM_MEMORY.P1
+086     IFS1
+087.6   FLAG
+220     U1MODE
+222     U1STA
+222.1   U1OERR
+222.2   U1FERR
+222.4   RIDLE1
+222.5   ADDEN2
+223.0   LIBRE1
+224     U1TXREG
+226     U1RXREG
+228     U1BRG
+230     U2MODE
+232     U2STA
+232.1   U2OERR
+232.2   U2FERR
+232.4   RIDLE2
+233.0   LIBRE2
+234     U2TXREG
+236     U2RXREG
+238     U2BRG
+2CE     OCDB
+32C     AD1PCFG
+630     CMCON
+630.6   COMPARATOR1_RESULT
+630.7   COMPARATOR2_RESULT
+800     SUMA
+801     PARITY
+802     COMMANDO_A_ID003
+803     ARGUMENTO_A_ID003
+804     COMMANDO_A_ID024
+805     ARGUMENTO_A_ID024
+806     ARGUMENT_BILL_ID003
+807     ACTIVATE_ID003
+808     ESTADOS_ID003_MQ
+809     ESTADOS_ID003_BILL
+80A     SUPER_ESTADOS_ID003_MQ
+80B     CONTA_ENVIO2
+80C-83D BUFFER_ENVIO_ID003
+83E-883 BUFFER_RX_ID003
+884     PUNT_ENV_2
+885     CONTAOR_BYTES_U2
+886     BANDER_BUFFER_INU2
+887     isr_int_RDA2.RXREG2
+887     serial_isr.RXREG1
+887     isr_timer2.MOLEX
+887     isr_TBE.MOLEX
+887     isr_TIMER3.MOLEX
+888-889 serial_isr.FG
+888-889 isr_int_RDA2.FG
+88A     ENVIAR_U1.PARIDAD
+88A     ENVIAR_U2.PARIDAD
+88B     ENVIAR_U2.DATO
+88B     ENVIAR_U1.DATO
+88C-88D ENVIAR_U1.CARGA_UTIL
+88C-88D ENVIAR_U2.CARGA_UTIL
+88E-88F ENVIAR_U2.DUMY2RX
+88E-88F ENVIAR_U1.DUMY1RX
+890     ENVIAR_U1.im
+890     ENVIAR_U2.im
+891     ENVIAR_U1.SUMA
+891     ENVIAR_U2.SUMA
+892     ENVIAR_U1.PARITY
+892     ENVIAR_U2.PARITY
+1F80-1FFF Stack
+
+ROM Allocation:
+0396  @delay_ms1
+02A2  ENVIAR_U1
+021C  ENVIAR_U2
+03A6  CONFIG_PORTS
+0200  isr_TRAP
+026E  serial_isr
+02F4  isr_int_RDA2
+0328  isr_TIMER3
+0346  isr_TBE
+0362  isr_timer2
+037E  isr_timer1
+040E  MAIN
+040E  @cinit
+
+Project Directory:
+    C:\PROYECTOS\IGAME_DE_JCM\
+
+Project Files:
+    PUENTE.c
+    RAM_PORTS.h
+    ..\..\Archivos de programa\PICC\devices\24FJ32GA002.h
+    ID003.h
+
+Units:
+    PUENTE.c (main)
+
+Compiler Settings:
+    Processor:      PIC24FJ32GA002
+    Pointer Size:   16
+    ADC Range:      0-65535
+    Opt Level:      0
+    Short,Int,Long: SIGNED: 8,16,32
+    Float,Double:   32,64
+
+Output Files:
+    Errors:      PUENTE.err
+    Ext Symbols: PUENTE.esym
+    INHX8:       PUENTE.hex
+    Symbols:     PUENTE.sym
+    List:        PUENTE.lst
+    Debug/COFF:  PUENTE.cof
+    Project:     PUENTE.PJT
+    Call Tree:   PUENTE.tre
+    Statistics:  PUENTE.sta

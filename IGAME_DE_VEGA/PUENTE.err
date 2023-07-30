@@ -1,0 +1,27 @@
+>>> Warning 207 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 71(1,1): Code has no effect
+>>> Warning 203 "PUENTE.c" Line 22(1,1): Condition always TRUE
+>>> Warning 203 "PUENTE.c" Line 112(1,1): Condition always TRUE
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\RAM_PORTS.h" Line 43(7,23): Variable never used:   COMMANDO_A_ID003
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\RAM_PORTS.h" Line 44(7,24): Variable never used:   ARGUMENTO_A_ID003
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\RAM_PORTS.h" Line 45(7,23): Variable never used:   COMMANDO_A_ID024
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\RAM_PORTS.h" Line 46(7,24): Variable never used:   ARGUMENTO_A_ID024
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\RAM_PORTS.h" Line 56(27,34): Variable never used:   DUMY1RX
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\RAM_PORTS.h" Line 77(27,34): Variable never used:   DUMY2RX
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 25(31,39): Variable never used:   TRAMA_B2
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 26(31,39): Variable never used:   TRAMA_B5
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 27(31,40): Variable never used:   TRAMA_B10
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 28(31,40): Variable never used:   TRAMA_B20
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 29(31,40): Variable never used:   TRAMA_B50
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 30(31,42): Variable never used:   ORDEN_PASAR
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 31(31,40): Variable never used:   ESTAKANDO
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 32(31,43): Variable never used:   VENTA_VALIDA
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 33(31,39): Variable never used:   GUARDADO
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 34(31,41): Variable never used:   RETENIENDO
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 36(31,40): Variable never used:   BILL_DESC
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 37(31,40): Variable never used:   ACEPTANDO
+>>> Warning 202 "C:\PROYECTOS\IGAME_DE_JCM\ID003.h" Line 41(27,38): Variable never used:   INITIALIZER
+>>> Warning 202 "PUENTE.c" Line 62(7,12): Variable never used:   MOLEX
+>>> Warning 202 "PUENTE.c" Line 70(7,12): Variable never used:   MOLEX
+>>> Warning 202 "PUENTE.c" Line 81(7,12): Variable never used:   MOLEX
+      Memory usage:   ROM=6%      RAM=3% - 3%
+      0 Errors,  25 Warnings.

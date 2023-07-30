@@ -1,0 +1,36 @@
+[PROJECT]
+Target=PUENTE.HEX
+Development_Mode=2
+Processor=0x006D
+Processor_Text=PIC24FJ32GA002
+ToolSuite=CCS
+
+[Directories]
+Include=
+Library=
+LinkerScript=
+
+[Target Data]
+FileList=PUENTE.c
+BuildTool=C-COMPILER
+OptionString=+FD
+AdditionalOptionString=
+BuildRequired=1
+
+[PUENTE.c]
+Type=4
+Path=
+FileList=
+BuildTool=
+OptionString=
+AdditionalOptionString=
+
+[mru-list]
+1=PUENTE.c
+
+[Windows]
+0=0000 PUENTE.c 0 0 796 451 3 0
+
+[Units]
+Count=1
+1=PUENTE.c (main)

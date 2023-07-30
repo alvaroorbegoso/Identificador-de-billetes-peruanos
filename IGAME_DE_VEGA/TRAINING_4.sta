@@ -1,0 +1,119 @@
+
+ROM used: 7516 (33%)
+          7516 (33%) including unused fragments
+
+          4 Average locations per line
+          8 Average locations per statement
+
+RAM used: 382 (5%) at main() level
+          421 (5%) worst case
+
+Stack used: 8 worst case (out of 31 total available)
+
+Lines Stmts  %   Files
+----- ----- ---  -----
+  192    89  10  TRAINING_4.c
+  146    29   3  RAM_PORTS.h
+  512     0   0  C:\Archivos de programa\PICC\devices\24FJ32GA002.h
+  525   437  48  ID024.h
+  404   347  38  ID003.h
+----- -----
+ 1779   902 Total
+
+Page ROM  %  RAM   Vol Diff  Functions:
+---- --- --- ---   --- ----  ----------
+0     16   0   2             @delay_ms1
+0     18   0   9   174  2.9  ENVIAR_U1
+0     18   0   9   174  2.9  ENVIAR_U2
+0    108   1   0   768  2.9  CONFIG_PORTS
+0     80   1   0             @const153
+0     20   0   0             @const161
+0     20   0   0             @const169
+0     20   0   0             @const171
+0     20   0   0             @const173
+0     20   0   0             @const175
+0     20   0   0             @const177
+0     24   0   0             @const179
+0     44   0   0             @const183
+0     44   0   0             @const185
+0     44   0   0             @const187
+0     44   0   0             @const189
+0     44   0   0             @const191
+0     44   0   0             @const193
+0     44   0   0             @const195
+0     44   0   0             @const197
+0     44   0   0             @const199
+0     44   0   0             @const201
+0     28   0   0             @const203
+0     28   0   0             @const205
+0     28   0   0             @const207
+0     28   0   0             @const209
+0     28   0   0             @const211
+0     20   0   0             @const215
+0     22   0   1   114  2.6  SACAR_DE_BUFFER
+0     50   0   4   181  3.6  SACA_ACK
+0     16   0   0    90  2.1  SACA_ENABLE
+0    174   1   4   848  6.8  SACA_DISABLE
+0    106   1  17   642  8.0  calc_crc_mch
+0    212   1   8  1333  9.2  COMANDOS_ID024_INICIALIZAR
+0    134   1   4   599  5.7  ESTADOS_VER_ID024_INICIALIZAR
+0     46   0   1   252  4.6  TEMPO_ID024
+0    248   2   5  1665  7.7  COMANDOS_ID024_BILLETE
+0   1120   7   6  7886  8.7  ESTADOS_VER_ID024_BILLETE
+0    224   1   8  1470  8.7  COMANDOS_ID024_NORMAL
+0     28   0   0    88  3.0  ESTADOS_VER_ID024_NORMAL
+0    196   1  10  1192  7.3  LISTO_BUFFER_ID024
+0     20   0   0             @const338
+0     20   0   0             @const352
+0     20   0   0             @const356
+0     24   0   0             @const360
+0     24   0   0             @const362
+0     22   0   0             @const364
+0     22   0   0             @const366
+0     22   0   0             @const368
+0     24   0   0             @const370
+0     22   0   0             @const372
+0     20   0   0             @const374
+0     20   0   0             @const376
+0     20   0   0             @const378
+0     20   0   0             @const380
+0     20   0   0             @const382
+0     20   0   0             @const384
+0     20   0   0             @const386
+0     20   0   0             @const388
+0     20   0   0             @const390
+0     22   0   0             @const394
+0     22   0   0             @const396
+0    544   4   0  4982  5.5  LISTO_BUFFER_ID003
+0     48   0   0   268  3.7  PROCESAR_COMANDOS_DE_ID024
+0   1586  11   4 11905  8.0  TEMPO_ID003
+0     32   0   0    14  0.8  isr_TRAP
+0     70   0   4   245  3.7  isr_timer2
+0     88   1   6   414  4.7  serial_isr
+0     66   0   1   171  4.0  isr_TBE
+0    108   1   6   497  4.8  isr_int_RDA2
+0     48   0   0   117  3.0  isr_TIMER3
+0     66   0   3   194  4.5  isr_TBE2
+0     28   0   0     3  0.0  isr_timer1
+0    316   2   0   354  3.3  MAIN
+
+Program metrics:
+    Functions               28
+    Statements              902
+    Comments                366
+    Volume (V)              54330
+    Difficilty (D)          133.9
+    Effort to implement (E) 7275579
+    Time to implement (T)   112 hours, 17 minutes
+    Est Delivered Bugs (B)  13
+    Cyclomatic Complexity   241
+    Maintainability (MI)    42
+
+ Segment     Used  Free
+-----------  ----  ----
+00000-00002     4  0  
+00004-001FE   508  0  
+00200-057FA  7004  15008  
+
+
+

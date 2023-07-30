@@ -1,0 +1,56 @@
+
+ROM used: 1280 (6%)
+          1280 (6%) including unused fragments
+
+          1 Average locations per line
+          4 Average locations per statement
+
+RAM used: 263 (3%) at main() level
+          275 (3%) worst case
+
+Stack used: 4 worst case (out of 30 total available)
+
+Lines Stmts  %   Files
+----- ----- ---  -----
+  118    27   8  PUENTE.c
+  131    65  20  RAM_PORTS.h
+  464     0   0  ..\..\Archivos de programa\PICC\devices\24FJ32GA002.h
+  274   240  72  ID003.h
+----- -----
+  987   332 Total
+
+Page ROM  %  RAM   Vol Diff  Functions:
+---- --- --- ---   --- ----  ----------
+0     16   1   2             @delay_ms1
+0     82   3   9   679  6.4  ENVIAR_U1
+0     82   3   9   679  6.4  ENVIAR_U2
+0    104   4   0   768  2.9  CONFIG_PORTS
+0     28   1   0    14  0.8  isr_TRAP
+0     52   2   3   190  2.7  serial_isr
+0     52   2   3   190  2.7  isr_int_RDA2
+0     30   1   1    38  1.4  isr_TIMER3
+0     28   1   1    22  1.2  isr_TBE
+0     28   1   1    22  1.2  isr_timer2
+0     24   1   0     3  0.0  isr_timer1
+0    242   9   0   149  1.8  MAIN
+
+Program metrics:
+    Functions               11
+    Statements              332
+    Comments                221
+    Volume (V)              4138
+    Difficilty (D)          30.1
+    Effort to implement (E) 124375
+    Time to implement (T)   1 hours, 55 minutes
+    Est Delivered Bugs (B)  1
+    Cyclomatic Complexity   12
+    Maintainability (MI)    115
+
+ Segment     Used  Free
+-----------  ----  ----
+00000-00002     4  0  
+00004-001FE   508  0  
+00200-057FA   768  21244  
+
+
+

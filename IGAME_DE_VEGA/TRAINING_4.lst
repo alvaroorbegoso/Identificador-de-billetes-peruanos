@@ -1,0 +1,4048 @@
+CCS PCD C Compiler, Version 4.124, 61484               20-Oct-11 14:53
+
+               Filename: E:\PROYECTOS\VEGA_BILLETERO\IGAME_DE_VEGA\TRAINING_4.lst
+
+               ROM used: 7516 bytes (33%)
+                         Largest free fragment is 15008
+               RAM used: 382 (5%) at main() level
+                         421 (5%) worst case
+               Stack:    8 worst case (2 in main + 6 for interrupts)
+
+*
+0000:  GOTO    1C20
+*
+0008:  DATA    F4,06,00
+*
+001A:  DATA    88,1B,00
+*
+0022:  DATA    08,11,00
+0024:  DATA    16,1B,00
+*
+002A:  DATA    4E,11,00
+002C:  DATA    A6,11,00
+*
+0050:  DATA    08,14,00
+0052:  DATA    46,1B,00
+.................... //REFERENCIA DE LA PLACA IMPRESO  12895 SAS ULTIMA 
+....................  
+.................... #include "\RAM_PORTS.h" 
+.................... #include <24FJ32GA002.h> 
+.................... //////// Standard Header file for the PIC24FJ32GA002 device //////////////// 
+.................... #device PIC24FJ32GA002 
+.................... #list 
+....................  
+....................  
+.................... #use      delay(clock=32000000) 
+*
+1BA4:  CP0     W0
+1BA6:  BTSC.B  42.1
+1BA8:  BRA     1BB2
+1BAA:  REPEAT  #3E7B
+1BAC:  NOP     
+1BAE:  DEC     W0,W0
+1BB0:  BRA     NZ,1BAA
+1BB2:  RETURN  
+.................... //#build(stack=0x1E00:0x1FFF) 
+....................  
+....................  
+.................... #use      fast_io(A) 
+.................... #use      fast_io(B) 
+.................... #word     T2CON=0X0110 
+.................... #word     CMCON=0X0630  
+.................... #word     OCDB=0X02CE 
+.................... #word     U1RXREG=0X0226 
+.................... #word     U2RXREG=0X0236 
+.................... #word     AD1PCFG=0X032C    
+.................... #word     U1BRG=0X0228 
+.................... #word     IFS1=0X0086 
+.................... #word     U1MODE=0X0220 
+.................... #word     U1STA=0X0222 
+.................... #word     U1TXREG=0X0224 
+.................... #bit      LIBRE1=U1STA.8 
+.................... #word     U2BRG=0X0238  
+.................... #word     U2MODE=0X0230 
+.................... #word     U2STA=0X0232 
+.................... #word     U2TXREG=0X0234 
+.................... #bit      ADDEN2=U1STA.5 
+.................... #bit      LIBRE2=U2STA.8 
+.................... #bit      U1OERR=U1STA.1 //BORRABLE  
+.................... #bit      U2OERR=U2STA.1 //BORRABLE 
+.................... #bit      U1FERR=U1STA.2   
+.................... #bit      U2FERR=U2STA.2  
+.................... #bit      FLAG=IFS1.14 
+.................... #bit      RIDLE1=U1STA.4 
+.................... #bit      RIDLE2=U2STA.4 
+.................... #bit      T2ON=T2CON.15 
+....................  
+....................  
+.................... #define   VISUAL_A             PIN_A0  //  
+.................... #define   VISUAL_B             PIN_A1 
+.................... #define   VISUAL_C             PIN_B0  //VERDE 
+.................... #define   VISUAL_D             PIN_B1//AMARILLO 
+....................  
+....................  
+.................... #define   RESET_A_ID003        0X01 
+.................... #define   ACTIVAR_A_ID003      0X02 
+.................... #define   DESACTIVAR_A_ID003   0X03 
+....................  
+.................... //SSSSSSSSSSSSSSSSS 
+....................  
+....................  
+.................... //PPPPP 
+.................... char MEMORIA_ESTADOS_ID024; 
+.................... char  SUMA=0; 
+.................... char  PARITY=0; 
+.................... char  COMMANDO_A_ID003=0; 
+.................... char  ARGUMENTO_A_ID003=0; 
+.................... char  COMMANDO_A_ID024=0; 
+.................... char  ARGUMENTO_A_ID024=0; 
+.................... char  ACTIVATE_ID003=0; 
+.................... char  BUFFER_BILLETES[2]={0X00,0X00}; 
+.................... char FLAGET=0; 
+.................... char DOSIF=0; 
+.................... char PERIODO_BILL=0; 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //CON  CERO PARDAD IMPAR CON UNO PAR 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void ENVIAR_U1 (char PARIDAD , char DATO) 
+.................... {int16 CARGA_UTIL=0;int16 DUMY1RX=0;char im; char SUMA=0;char PARITY=0; 
+*
+0714:  CLR     91E
+0716:  CLR     920
+0718:  CLR.B   923
+071A:  CLR.B   924
+.................... // for(im=0;im<8;im++){if(bit_test(DATO,im)){SUMA++;}} 
+.................... // if(bit_test(SUMA,0)){PARITY=1;} 
+.................... // else {PARITY=0;} 
+.................... // PARIDAD=PARITY; 
+.................... // if(PARIDAD==0){bit_clear(CARGA_UTIL,8);} 
+.................... // if(PARIDAD==1){bit_set(CARGA_UTIL,8);} 
+.................... // CARGA_UTIL=CARGA_UTIL+DATO; 
+.................... // //while(!LIBRE1){restart_wdt();}  
+....................  U1TXREG=DATO;//CARGA_UTIL;  
+071C:  MOV.B   91D,W0L
+071E:  MOV.B   W0L,224
+0720:  CLR.B   225
+....................  //while(!LIBRE1){restart_wdt();}  
+....................  U1OERR=0; 
+0722:  BCLR.B  222.1
+.................... } 
+0724:  RETURN  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //RECUERDE DESHABILITAR LA RECEPCION DE DATOS PA NO PERDER TIEMPO  
+.................... //ATENDIENDO INTERRUPCIONES GENERADAS POR SI MISMO 
+.................... //COMUNICACION CON PC 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void ENVIAR_U2 (char PARIDAD , char DATO)//CONEXION PC 
+.................... {int16 CARGA_UTIL=0;int16 DUMY2RX=0;char im; char SUMA=0;char PARITY=0; 
+*
+14A4:  CLR     904
+14A6:  CLR     906
+14A8:  CLR.B   909
+14AA:  CLR.B   90A
+.................... // for(im=0;im<8;im++){if(bit_test(DATO,im)){SUMA++;}} 
+.................... // if(bit_test(SUMA,0)){PARITY=1;} 
+.................... // else {PARITY=0;} 
+.................... // PARIDAD=PARITY; 
+.................... // if(PARIDAD==0){bit_clear(CARGA_UTIL,8);} 
+.................... // if(PARIDAD==1){bit_set(CARGA_UTIL,8);} 
+.................... // CARGA_UTIL=CARGA_UTIL+DATO; 
+....................  //while(!LIBRE2){restart_wdt();} //PA TRABAJAR CON INTERRUPCIONES 
+....................  U2TXREG=DATO;//CARGA_UTIL; 
+14AC:  MOV.B   903,W0L
+14AE:  MOV.B   W0L,234
+14B0:  CLR.B   235
+....................  //while(!LIBRE2){restart_wdt();}  
+....................  U2OERR=0; 
+14B2:  BCLR.B  232.1
+.................... } 
+14B4:  RETURN  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void CONFIG_PORTS (void) 
+.................... { 
+.................... //COMPARADOR 
+....................  disable_interrupts(INTR_GLOBAL); 
+*
+1BB4:  BCLR.B  81.7
+1BB6:  MOV     #E0,W4
+1BB8:  MOV     W4,42
+1BBA:  BSET.B  81.7
+....................  OCDB=(0b1000000000000000)     ; 
+1BBC:  MOV     #8000,W4
+1BBE:  MOV     W4,2CE
+....................  SET_TRIS_A(0b1111111111111100); 
+1BC0:  MOV     #FFFC,W4
+1BC2:  MOV     W4,2C0
+....................  SET_TRIS_B(0b1111111111001100); 
+1BC4:  MOV     #FFCC,W4
+1BC6:  MOV     W4,2C8
+....................  setup_vref(VREF_LOW | 14)     ; 
+1BC8:  MOV     #102E,W4
+1BCA:  MOV     W4,632
+....................  //setup_adc_ports(sAN4|sAN2)  ; 
+....................  AD1PCFG=(0b1111111111111111)  ; 
+1BCC:  SETM    32C
+....................  CMCON=  (0b1111001111110000)  ;//AD1PCFG= 
+1BCE:  MOV     #F3F0,W4
+1BD0:  MOV     W4,630
+....................  //COMUNICACION CON MAQUINA 
+....................  U1MODE=(0b1000110000000010)   ;//9 BIT 19200 BAUD 
+1BD2:  MOV     #8C02,W4
+1BD4:  MOV     W4,220
+....................  U1BRG=51;//9600(103)-19200(51) 
+1BD6:  MOV     #33,W4
+1BD8:  MOV     W4,228
+....................  U1STA= (0b0001011100011111)   ; 
+1BDA:  MOV     #171F,W4
+1BDC:  MOV     W4,222
+....................      //=(0b0001011100111111)    ; 
+....................  //COMUNICACION CON PC 
+....................  U2MODE=(0b1000110000000010)   ; 
+1BDE:  MOV     #8C02,W4
+1BE0:  MOV     W4,230
+....................  U2BRG=103;//9600(103)-19200(51) 
+1BE2:  MOV     #67,W4
+1BE4:  MOV     W4,238
+....................  U2STA=(0b0001011100011111)    ; 
+1BE6:  MOV     #171F,W4
+1BE8:  MOV     W4,232
+....................  //CONFIGURANDO UN TIMER 
+....................  
+....................  setup_timer2((TMR_INTERNAL | TMR_DIV_BY_1),0x2FFF);//1 9 CONTEO ESPACIO INTER TRAMA 
+1BEA:  CLR     110
+1BEC:  MOV     #2FFF,W4
+1BEE:  MOV     W4,10C
+1BF0:  MOV     #A000,W4
+1BF2:  MOV     W4,110
+....................  setup_timer3((TMR_INTERNAL | TMR_DIV_BY_64),0x9FFA);//64 
+1BF4:  CLR     112
+1BF6:  MOV     #9FFA,W4
+1BF8:  MOV     W4,10E
+1BFA:  MOV     #A020,W4
+1BFC:  MOV     W4,112
+....................  setup_timer1((TMR_INTERNAL | TMR_DIV_BY_64),0x38FF); 
+1BFE:  CLR     104
+1C00:  MOV     #38FF,W4
+1C02:  MOV     W4,102
+1C04:  MOV     #A020,W4
+1C06:  MOV     W4,104
+....................  
+....................  output_high(VISUAL_A); 
+1C08:  BSET.B  2C4.0
+....................  output_high(VISUAL_B); 
+1C0A:  BSET.B  2C4.1
+....................  output_high(VISUAL_C); 
+1C0C:  BSET.B  2CC.0
+....................  output_high(VISUAL_D); 
+1C0E:  BSET.B  2CC.1
+....................  
+....................  delay_ms(900); 
+1C10:  MOV     #384,W0
+1C12:  CALL    1BA4
+....................  
+....................  output_low(VISUAL_A); 
+1C16:  BCLR.B  2C4.0
+....................  output_low(VISUAL_B); 
+1C18:  BCLR.B  2C4.1
+....................  output_low(VISUAL_C); 
+1C1A:  BCLR.B  2CC.0
+....................  output_low(VISUAL_D); 
+1C1C:  BCLR.B  2CC.1
+....................  
+.................... } 
+1C1E:  RETURN  
+....................  
+.................... #include "\ID024.h" 
+....................  
+.................... enum {NORMAL_ID024,BILLETE_ID024,INICIALIZAR_ID024};//PARA SUPER ESTADOS_ID024 
+.................... enum {INACTIVO,ACTIVO,ESTADO_1,ESTADO_2}; 
+.................... enum {DENOM_ACEPTING_ID024,HOLDING_ID024,ESTAKED_ID024,ESTAKANDO_ID024, 
+....................       REJECTED_ID024,REJECTING_ID024,ACTIVO_BILLETE,INACTIVO_BILLETE};//ESTADOS DE PASO DE BILL 
+....................  
+....................  
+.................... //char  PAR; 
+.................... char  FLAG_IDO24_RIDLE=0; 
+.................... int16 REBOTE_RIDLE=0; 
+.................... char  HISTORIAL_RIDLE; 
+.................... char  CONTAOR_BYTES_ID024=11; 
+.................... char  BUFFER_ID024_RX[32]={0X09,0X74,0X08,0XFF,0XF1,0XFF,0XCC,0X61,0X12,0X58,0X73}; 
+.................... char  BUFER_ENVIO_ID024[60]={}; 
+.................... char  PUNT_ENV_ID024=0; 
+.................... char  BYTES_A_ENVIAR_ID024=0; 
+.................... char  SUPER_ESTADOS_ID024=INICIALIZAR_ID024; 
+.................... char  ESTADOS_ID024=INACTIVO; 
+.................... char  ROTACION=0; 
+.................... char  VIENE_BILLETE_A=0; 
+.................... char  VIENE_BILLETE_B=0; 
+....................  
+.................... CONST unsigned int TRAMA_VERSION_ID024[]={0X04,0X42,0X23,0X57,0X42,0X41, 
+....................                                           0X2D,0X31,0X32,0X2F,0X31,0X33, 
+....................                                           0X20,0X30,0X32,0X34,0X20,0X20, 
+....................                                           0X56,0X33,0X2E,0X36,0X30,0X2D, 
+....................                                           0X33,0X30,0X20,0X20,0X20,0X20, 
+....................                                           0X20,0X20,0X20,0X96,0XC7 
+....................                                          }; 
+....................  
+....................  
+.................... CONST unsigned int RESET_ID024[]      = {0X04,0X2F,0X05,0X37,0X94}  ; 
+.................... CONST unsigned int CMD1_INICIALIZAR[] = {0X04,0X74,0X08,0XFF,0XF1,0XFF,0XCC,0X61}  ; 
+.................... CONST unsigned int CMD2_INICIALIZAR[] = {0X04,0XB0,0X05,0XA2,0X0E}; 
+.................... CONST unsigned int CMD3_INICIALIZAR[] = {0X04,0XF1,0X05,0X1C,0X51}; 
+.................... CONST unsigned int CMD4_INICIALIZAR[] = {0X04,0X62,0X0B,0X00,0X00,0X00,0X00,0X34,0X12,0X58,0X73}; 
+.................... CONST unsigned int CMD5_INICIALIZAR[] = {0X04,0X82,0X05,0XB0,0X8B}; 
+.................... CONST unsigned int CMD6_INICIALIZAR[] = {0X04,0XF0,0X05,0XC4,0X48}; 
+....................  
+.................... CONST unsigned int REPORTE_DISABLE1[] ={0X04,0X90,0X05,0X91,0X2D}; 
+.................... CONST unsigned int REPORTE_DISABLE2[] ={0X04,0XD0,0X05,0XF7,0X6B}; 
+.................... CONST unsigned int REPORTE_DISABLE3[] ={0X04,0X50,0X05,0X3B,0XE7}; 
+.................... CONST unsigned int ACK_ID024[]        ={0X04,0X01,0X05,0X14,0X2D}; 
+.................... CONST unsigned int TRAMA_ESTAD1[]     ={0X04,0X10,0X05,0X5D,0XA1}; 
+.................... CONST unsigned int TRAMA_ESTAD2[]     ={0X04,0XE3,0X07,0XF7,0X99,0X1A,0X08}; 
+.................... CONST unsigned int TRAMA_ORDEN_RESET[]={0X04,0X2F,0X05,0X37,0X94}; 
+....................  
+.................... CONST unsigned int BILLETE_1A_ID024[]  ={0x04,0XF0,0X11,0X64,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0XBB,0XB8}; 
+.................... CONST unsigned int BILLETE_1B_ID024[]  ={0x04,0XB0,0X11,0X64,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0XD4,0XFB}; 
+.................... CONST unsigned int BILLETE_5A_ID024[]  ={0X04,0XB0,0X11,0XF4,0X01,0x00,0X00,0X00,0x00,0X00,0X00,0x00,0X00,0X00,0x00,0X5D,0X15}; 
+.................... CONST unsigned int BILLETE_5B_ID024[]  ={0X04,0XF0,0X11,0XF4,0X01,0x00,0X00,0X00,0x00,0X00,0X00,0x00,0X00,0X00,0x00,0X32,0X56}; 
+.................... CONST unsigned int BILLETE_10A_ID024[] ={0X04,0X70,0X11,0XE8,0X03,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0x00,0X8C,0X61}; 
+.................... CONST unsigned int BILLETE_10B_ID024[] ={0X04,0XF0,0X11,0XE8,0X03,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0x00,0X52,0XE7}; 
+.................... CONST unsigned int BILLETE_20A_ID024[] ={0X04,0X70,0X11,0XD0,0X07,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X5D,0X0B}; 
+.................... CONST unsigned int BILLETE_20B_ID024[] ={0X04,0XB0,0X11,0XD0,0X07,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0XEC,0XCE}; 
+.................... CONST unsigned int BILLETE_50A_ID024[] ={0X04,0X70,0X11,0X88,0X13,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X19,0X6C}; 
+.................... CONST unsigned int BILLETE_50B_ID024[] ={0X04,0XF0,0X11,0X88,0X13,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0XC7,0XEA}; 
+....................  
+....................  
+.................... CONST unsigned int RECHAZA_1A_ID024[]  ={0X04,0X73,0X09,0X64,0X00,0X00,0X00,0X66,0X1C}; 
+.................... CONST unsigned int RECHAZA_5A_ID024[]  ={0X04,0X73,0X09,0XF4,0X01,0X00,0X00,0X75,0XA8}; 
+.................... CONST unsigned int RECHAZA_10A_ID024[] ={0X04,0XF3,0X09,0XE8,0X03,0X00,0X00,0XFA,0X4C}; 
+.................... CONST unsigned int RECHAZA_20A_ID024[] ={0X04,0XB3,0X09,0XD0,0X07,0X00,0X00,0X60,0X84}; 
+.................... CONST unsigned int RECHAZA_50A_ID024[] ={0X04,0XB3,0X09,0X88,0X13,0X00,0X00,0X5A,0X52}; 
+....................  
+....................  
+.................... CONST unsigned int ESTAKEDA_ID024[] ={0X04,0XF1,0X05,0X1C,0X51}; 
+.................... CONST unsigned int ESTAKEDB_ID024[] ={0X04,0XB1,0X05,0X7A,0X17}; 
+....................  
+....................  
+....................  
+....................  
+....................  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //char  COMMANDO_A_ID003=0; 
+.................... //char  ARGUMENTO_A_ID003=0; 
+.................... //char  COMMANDO_A_ID024=0; 
+.................... //char  ARGUMENTO_A_ID024=0; 
+.................... //char  ACTIVATE_ID003=0; 
+.................... //COMANDOS DE ID024 A ID003 
+.................... //01 RESET 
+.................... //02 ACTIVAR 
+.................... //03 DESACTIVAR 
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //PARAMETROS DE ENTRADA CANTIDAD DE BYTES A ENVIAR Y BUFFER CARGADO 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void SACAR_DE_BUFFER (void) 
+.................... {char M1; 
+....................  PUNT_ENV_ID024=1; 
+*
+0726:  MOV.B   #1,W0L
+0728:  MOV.B   W0L,86E
+....................  enable_interrupts(int_TBE); 
+072A:  BSET.B  95.4
+....................  M1=BUFER_ENVIO_ID024[0]; 
+072C:  MOV.B   832,W0L
+072E:  MOV.B   W0L,91A
+....................  ENVIAR_U1(0,M1);} 
+0730:  CLR.B   91C
+0732:  MOV.B   91A,W0L
+0734:  MOV.B   W0L,91D
+0736:  CALL    714
+073A:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void SACA_ACK(void) 
+.................... {char jk; 
+*
+0D66:  MOV     W5,[W15++]
+....................  for(jk=0;jk<ACK_ID024[2];jk++){BUFER_ENVIO_ID024[jk]=ACK_ID024[jk];} 
+0D68:  CLR.B   918
+0D6A:  MOV.B   918,W0L
+0D6C:  SE      W0,W0
+0D6E:  CP      W0,#5
+0D70:  BRA     GE,D8C
+0D72:  MOV.B   918,W0L
+0D74:  SE      W0,W0
+0D76:  MOV     #832,W4
+0D78:  ADD     W0,W4,W5
+0D7A:  MOV.B   918,W0L
+0D7C:  SE      W0,W0
+0D7E:  MOV     W0,W4
+0D80:  MUL.UU  W4,#2,W0
+0D82:  CALL    2A0
+0D86:  MOV.B   W0L,[W5]
+0D88:  INC.B   0918
+0D8A:  BRA     D6A
+....................  BYTES_A_ENVIAR_ID024=ACK_ID024[2]; 
+0D8C:  MOV.B   #5,W0L
+0D8E:  MOV.B   W0L,86F
+....................  SACAR_DE_BUFFER(); 
+0D90:  CALL    726
+.................... } 
+0D94:  MOV     [--W15],W5
+0D96:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void SACA_ENABLE(void) 
+.................... {BUFER_ENVIO_ID024[0]=0X04;BUFER_ENVIO_ID024[1]=0X00; 
+*
+07EA:  MOV.B   #4,W0L
+07EC:  MOV.B   W0L,832
+07EE:  CLR.B   833
+....................  BYTES_A_ENVIAR_ID024=2;SACAR_DE_BUFFER(); 
+07F0:  MOV.B   #2,W0L
+07F2:  MOV.B   W0L,86F
+07F4:  CALL    726
+.................... } 
+07F8:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void SACA_DISABLE (void) 
+.................... {char jk; 
+*
+073C:  MOV     W5,[W15++]
+....................  if(ROTACION==3){ROTACION=0;} 
+073E:  MOV.B   872,W0L
+0740:  SE      W0,W0
+0742:  CP      W0,#3
+0744:  BRA     NZ,748
+0746:  CLR.B   872
+....................  switch(ROTACION) 
+....................        {case 0:for(jk=0;jk<REPORTE_DISABLE1[2];jk++){BUFER_ENVIO_ID024[jk]=REPORTE_DISABLE1[jk];} 
+0748:  MOV.B   872,W0L
+074A:  CLR.B   1
+074C:  XOR     #0,W0
+074E:  BRA     Z,75A
+0750:  XOR     #1,W0
+0752:  BRA     Z,788
+0754:  XOR     #3,W0
+0756:  BRA     Z,7B6
+0758:  BRA     7E2
+075A:  CLR.B   918
+075C:  MOV.B   918,W0L
+075E:  SE      W0,W0
+0760:  CP      W0,#5
+0762:  BRA     GE,77E
+0764:  MOV.B   918,W0L
+0766:  SE      W0,W0
+0768:  MOV     #832,W4
+076A:  ADD     W0,W4,W5
+076C:  MOV.B   918,W0L
+076E:  SE      W0,W0
+0770:  MOV     W0,W4
+0772:  MUL.UU  W4,#2,W0
+0774:  CALL    264
+0778:  MOV.B   W0L,[W5]
+077A:  INC.B   0918
+077C:  BRA     75C
+....................                BYTES_A_ENVIAR_ID024=REPORTE_DISABLE1[2]; 
+077E:  MOV.B   #5,W0L
+0780:  MOV.B   W0L,86F
+....................                ROTACION=1; 
+0782:  MOV.B   #1,W0L
+0784:  MOV.B   W0L,872
+....................                break; 
+0786:  BRA     7E2
+....................         case 1:for(jk=0;jk<REPORTE_DISABLE2[2];jk++){BUFER_ENVIO_ID024[jk]=REPORTE_DISABLE2[jk];} 
+0788:  CLR.B   918
+078A:  MOV.B   918,W0L
+078C:  SE      W0,W0
+078E:  CP      W0,#5
+0790:  BRA     GE,7AC
+0792:  MOV.B   918,W0L
+0794:  SE      W0,W0
+0796:  MOV     #832,W4
+0798:  ADD     W0,W4,W5
+079A:  MOV.B   918,W0L
+079C:  SE      W0,W0
+079E:  MOV     W0,W4
+07A0:  MUL.UU  W4,#2,W0
+07A2:  CALL    278
+07A6:  MOV.B   W0L,[W5]
+07A8:  INC.B   0918
+07AA:  BRA     78A
+....................                BYTES_A_ENVIAR_ID024=REPORTE_DISABLE2[2]; 
+07AC:  MOV.B   #5,W0L
+07AE:  MOV.B   W0L,86F
+....................                ROTACION=2; 
+07B0:  MOV.B   #2,W0L
+07B2:  MOV.B   W0L,872
+....................                break; 
+07B4:  BRA     7E2
+....................         case 2:for(jk=0;jk<REPORTE_DISABLE3[2];jk++){BUFER_ENVIO_ID024[jk]=REPORTE_DISABLE3[jk];} 
+07B6:  CLR.B   918
+07B8:  MOV.B   918,W0L
+07BA:  SE      W0,W0
+07BC:  CP      W0,#5
+07BE:  BRA     GE,7DA
+07C0:  MOV.B   918,W0L
+07C2:  SE      W0,W0
+07C4:  MOV     #832,W4
+07C6:  ADD     W0,W4,W5
+07C8:  MOV.B   918,W0L
+07CA:  SE      W0,W0
+07CC:  MOV     W0,W4
+07CE:  MUL.UU  W4,#2,W0
+07D0:  CALL    28C
+07D4:  MOV.B   W0L,[W5]
+07D6:  INC.B   0918
+07D8:  BRA     7B8
+....................                BYTES_A_ENVIAR_ID024=REPORTE_DISABLE3[2]; 
+07DA:  MOV.B   #5,W0L
+07DC:  MOV.B   W0L,86F
+....................                ROTACION=0; 
+07DE:  CLR.B   872
+....................                break; 
+07E0:  BRA     7E2
+....................        } 
+....................  SACAR_DE_BUFFER(); 
+07E2:  CALL    726
+.................... } 
+07E6:  MOV     [--W15],W5
+07E8:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... int16 calc_crc_mch(unsigned char *data, int16 n, int16 start) 
+.................... {int16 w, q, c, crcval; 
+*
+0CFC:  MOV     W5,[W15++]
+....................  crcval=start; 
+0CFE:  PUSH    910
+0D00:  POP     918
+....................  for (w=0; w<n; w++) 
+0D02:  CLR     912
+0D04:  MOV     912,W0
+0D06:  MOV     90E,W4
+0D08:  CP      W4,W0
+0D0A:  BRA     LE,D50
+....................      {c=data[w] & 0xFF; 
+0D0C:  MOV     912,W0
+0D0E:  ADD     90C,W0
+0D10:  MOV.B   [W0],W0L
+0D12:  AND     #FF,W0
+0D14:  MOV     W0,916
+....................       q=(crcval^c) & 0x0F; 
+0D16:  MOV     918,W0
+0D18:  XOR     916,W0
+0D1A:  MOV     W0,W5
+0D1C:  AND     W5,#F,W0
+0D1E:  MOV     W0,914
+....................       crcval=(crcval>>4)^(q*0x1081); 
+0D20:  MOV     918,W5
+0D22:  LSR     W5,#4,W5
+0D24:  MOV     914,W4
+0D26:  MOV     #1081,W3
+0D28:  MUL.SS  W4,W3,W0
+0D2A:  MOV     W0,918
+0D2C:  MOV     W5,W0
+0D2E:  XOR     918
+....................       q=(crcval^(c>>4)) & 0x0F; 
+0D30:  MOV     916,W0
+0D32:  LSR     W0,#4,W0
+0D34:  XOR     918,W0
+0D36:  MOV     W0,W5
+0D38:  AND     W5,#F,W0
+0D3A:  MOV     W0,914
+....................       crcval=(crcval>>4)^(q*0x1081); 
+0D3C:  MOV     918,W5
+0D3E:  LSR     W5,#4,W5
+0D40:  MOV     914,W4
+0D42:  MOV     #1081,W3
+0D44:  MUL.SS  W4,W3,W0
+0D46:  MOV     W0,918
+0D48:  MOV     W5,W0
+0D4A:  XOR     918
+....................      } 
+0D4C:  INC     0912
+0D4E:  BRA     D04
+....................  crcval=((crcval<<8)|(crcval>>8));  
+0D50:  MOV.B   918,W0L
+0D52:  MOV.B   W0L,B
+0D54:  CLR.B   W5
+0D56:  MOV.B   919,W0L
+0D58:  CLR.B   1
+0D5A:  IOR      W5,  W0,W0
+0D5C:  MOV     W0,918
+....................  return crcval; 
+0D5E:  PUSH    918
+0D60:  POP     0
+.................... } 
+0D62:  MOV     [--W15],W5
+0D64:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //RECIBIDOS DE LA MAQUINA 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void COMANDOS_ID024_INICIALIZAR(void) 
+.................... {char ML;char COMANDO_ID024;char COMANDO2;char jk;char LONGITUD1; 
+*
+0D98:  MOV     W5,[W15++]
+....................  
+....................  LONGITUD1=BUFFER_ID024_RX[2]; 
+0D9A:  MOV.B   814,W0L
+0D9C:  MOV.B   W0L,916
+....................  COMANDO2=BUFFER_ID024_RX[1];//SALVARLO SIN MODIFICACION 
+0D9E:  MOV.B   813,W0L
+0DA0:  MOV.B   W0L,914
+....................  COMANDO_ID024=COMANDO2&0X0F;//EXTRAER NIBBLE BAJO 
+0DA2:  MOV.B   914,W0L
+0DA4:  SE      W0,W0
+0DA6:  AND     W0,#F,W0
+0DA8:  MOV.B   W0L,913
+....................   
+....................  
+....................  switch(COMANDO_ID024) 
+....................    {case 0X0F:ESTADOS_ID024=ESTADO_1; 
+0DAA:  MOV.B   913,W0L
+0DAC:  CLR.B   1
+0DAE:  XOR     #F,W0
+0DB0:  BRA     Z,DC4
+0DB2:  XOR     #F,W0
+0DB4:  BRA     Z,DD0
+0DB6:  XOR     #1,W0
+0DB8:  BRA     Z,DDA
+0DBA:  XOR     #3,W0
+0DBC:  BRA     Z,E04
+0DBE:  XOR     #6,W0
+0DC0:  BRA     Z,E5A
+0DC2:  BRA     E62
+0DC4:  MOV.B   #2,W0L
+0DC6:  MOV.B   W0L,871
+....................               output_low(VISUAL_D); 
+0DC8:  BCLR.B  2CC.1
+....................               SACA_ACK(); 
+0DCA:  CALL    D66
+....................               break; 
+0DCE:  BRA     E68
+....................     case 0X00:ESTADOS_ID024=ACTIVO; 
+0DD0:  MOV.B   #1,W0L
+0DD2:  MOV.B   W0L,871
+....................               SACA_ACK(); 
+0DD4:  CALL    D66
+....................               break; 
+0DD8:  BRA     E68
+....................     case 0X01:if(BUFFER_ID024_RX[4]!=0X2D){ESTADOS_ID024=INACTIVO; 
+0DDA:  MOV.B   816,W0L
+0DDC:  SE      W0,W0
+0DDE:  MOV     #2D,W4
+0DE0:  CP      W4,W0
+0DE2:  BRA     Z,DEA
+0DE4:  CLR.B   871
+....................                                            SACA_ENABLE(); 
+0DE6:  CALL    7EA
+....................                                           }//DISCRIMINAR ENTRE DESACTIVAR Y UN ACK 
+....................               if(BUFFER_ID024_RX[4]==0X2D)//CORRESPONDE A UN ACK 
+0DEA:  MOV.B   816,W0L
+0DEC:  SE      W0,W0
+0DEE:  MOV     #2D,W4
+0DF0:  CP      W4,W0
+0DF2:  BRA     NZ,E02
+....................               {switch(ESTADOS_ID024) 
+....................                       {case ESTADO_2:ESTADOS_ID024=INACTIVO;break; 
+0DF4:  MOV.B   871,W0L
+0DF6:  CLR.B   1
+0DF8:  XOR     #3,W0
+0DFA:  BRA     Z,DFE
+0DFC:  BRA     E02
+0DFE:  CLR.B   871
+0E00:  BRA     E02
+....................                       } 
+....................               } 
+....................               break; 
+0E02:  BRA     E68
+....................     case 0x02:if(LONGITUD1==0X0B||LONGITUD1==0X0D){ESTADOS_ID024=ESTADO_2;SACA_ACK();} 
+0E04:  MOV.B   916,W0L
+0E06:  SE      W0,W0
+0E08:  CP      W0,#B
+0E0A:  BRA     Z,E14
+0E0C:  MOV.B   916,W0L
+0E0E:  SE      W0,W0
+0E10:  CP      W0,#D
+0E12:  BRA     NZ,E1C
+0E14:  MOV.B   #3,W0L
+0E16:  MOV.B   W0L,871
+0E18:  CALL    D66
+....................               if(BUFFER_ID024_RX[2]==0X05) 
+0E1C:  MOV.B   814,W0L
+0E1E:  SE      W0,W0
+0E20:  CP      W0,#5
+0E22:  BRA     NZ,E58
+....................                 {for(jk=0;jk<TRAMA_VERSION_ID024[2];jk++){BUFER_ENVIO_ID024[jk]=TRAMA_VERSION_ID024[jk];} 
+0E24:  CLR.B   915
+0E26:  MOV.B   915,W0L
+0E28:  SE      W0,W0
+0E2A:  MOV     #23,W4
+0E2C:  CP      W4,W0
+0E2E:  BRA     LE,E4A
+0E30:  MOV.B   915,W0L
+0E32:  SE      W0,W0
+0E34:  MOV     #832,W4
+0E36:  ADD     W0,W4,W5
+0E38:  MOV.B   915,W0L
+0E3A:  SE      W0,W0
+0E3C:  MOV     W0,W4
+0E3E:  MUL.UU  W4,#2,W0
+0E40:  CALL    200
+0E44:  MOV.B   W0L,[W5]
+0E46:  INC.B   0915
+0E48:  BRA     E26
+....................                  BYTES_A_ENVIAR_ID024=TRAMA_VERSION_ID024[2]; 
+0E4A:  MOV.B   #23,W0L
+0E4C:  MOV.B   W0L,86F
+....................                  SACAR_DE_BUFFER(); 
+0E4E:  CALL    726
+....................                  output_high(VISUAL_D); 
+0E52:  BSET.B  2CC.1
+....................                 SUPER_ESTADOS_ID024=NORMAL_ID024;ESTADOS_ID024=INACTIVO;} 
+0E54:  CLR.B   870
+0E56:  CLR.B   871
+....................               break; 
+0E58:  BRA     E68
+....................     case 0X04:ESTADOS_ID024=INACTIVO; 
+0E5A:  CLR.B   871
+....................               SACA_ACK(); 
+0E5C:  CALL    D66
+....................               break; 
+0E60:  BRA     E68
+....................     default  :SACA_ACK();break; 
+0E62:  CALL    D66
+0E66:  BRA     E68
+....................    }  
+.................... } 
+0E68:  MOV     [--W15],W5
+0E6A:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void ESTADOS_VER_ID024_INICIALIZAR(void) 
+.................... {char jk; 
+*
+07FA:  MOV     W5,[W15++]
+....................  switch(ESTADOS_ID024) 
+....................    {case INACTIVO: SACA_DISABLE();break; 
+07FC:  MOV.B   871,W0L
+07FE:  CLR.B   1
+0800:  XOR     #0,W0
+0802:  BRA     Z,812
+0804:  XOR     #1,W0
+0806:  BRA     Z,818
+0808:  XOR     #3,W0
+080A:  BRA     Z,81E
+080C:  XOR     #1,W0
+080E:  BRA     Z,84E
+0810:  BRA     87C
+0812:  CALL    73C
+0816:  BRA     87C
+....................     case ACTIVO: SACA_ENABLE();break; 
+0818:  CALL    7EA
+081C:  BRA     87C
+....................     case ESTADO_1:for(jk=0;jk<TRAMA_ESTAD1[2];jk++){BUFER_ENVIO_ID024[jk]=TRAMA_ESTAD1[jk];} 
+081E:  CLR.B   912
+0820:  MOV.B   912,W0L
+0822:  SE      W0,W0
+0824:  CP      W0,#5
+0826:  BRA     GE,842
+0828:  MOV.B   912,W0L
+082A:  SE      W0,W0
+082C:  MOV     #832,W4
+082E:  ADD     W0,W4,W5
+0830:  MOV.B   912,W0L
+0832:  SE      W0,W0
+0834:  MOV     W0,W4
+0836:  MUL.UU  W4,#2,W0
+0838:  CALL    2B4
+083C:  MOV.B   W0L,[W5]
+083E:  INC.B   0912
+0840:  BRA     820
+....................                   BYTES_A_ENVIAR_ID024=TRAMA_ESTAD1[2]; 
+0842:  MOV.B   #5,W0L
+0844:  MOV.B   W0L,86F
+....................                   SACAR_DE_BUFFER(); 
+0846:  CALL    726
+....................                   ESTADOS_ID024=INACTIVO; 
+084A:  CLR.B   871
+....................                   break; 
+084C:  BRA     87C
+....................     case ESTADO_2:for(jk=0;jk<TRAMA_ESTAD2[2];jk++){BUFER_ENVIO_ID024[jk]=TRAMA_ESTAD2[jk];} 
+084E:  CLR.B   912
+0850:  MOV.B   912,W0L
+0852:  SE      W0,W0
+0854:  CP      W0,#7
+0856:  BRA     GE,872
+0858:  MOV.B   912,W0L
+085A:  SE      W0,W0
+085C:  MOV     #832,W4
+085E:  ADD     W0,W4,W5
+0860:  MOV.B   912,W0L
+0862:  SE      W0,W0
+0864:  MOV     W0,W4
+0866:  MUL.UU  W4,#2,W0
+0868:  CALL    2C8
+086C:  MOV.B   W0L,[W5]
+086E:  INC.B   0912
+0870:  BRA     850
+....................                   BYTES_A_ENVIAR_ID024=TRAMA_ESTAD2[2]; 
+0872:  MOV.B   #7,W0L
+0874:  MOV.B   W0L,86F
+....................                   SACAR_DE_BUFFER(); 
+0876:  CALL    726
+....................                   break; 
+087A:  BRA     87C
+....................    } 
+.................... } 
+087C:  MOV     [--W15],W5
+087E:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //CUANDO TERMINA LA CARGA DEL BILLETE ROTAR EL BUFFER BILLETE Y BORRAR 
+.................... //EL REGISTRO QUE SE ACABA DE CARGAR 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void TEMPO_ID024(void) 
+.................... {char NEXT; 
+....................  NEXT=BUFFER_BILLETES[0]; 
+*
+1AE8:  MOV.B   808,W0L
+1AEA:  MOV.B   W0L,8FE
+....................  PERIODO_BILL++; 
+1AEC:  INC.B   080C
+....................  if(PERIODO_BILL==1) 
+1AEE:  MOV.B   80C,W0L
+1AF0:  SE      W0,W0
+1AF2:  CP      W0,#1
+1AF4:  BRA     NZ,1B14
+....................  {PERIODO_BILL=0; 
+1AF6:  CLR.B   80C
+....................   if((SUPER_ESTADOS_ID024!=BILLETE_ID024)&&ESTADOS_ID024==ACTIVO) 
+1AF8:  MOV     870,W4
+1AFA:  CP.B    W4L,#1
+1AFC:  BRA     Z,1B14
+1AFE:  MOV     870,W4
+1B00:  LSR     W4,#8,W4
+1B02:  CP.B    W4L,#1
+1B04:  BRA     NZ,1B14
+....................      {if(NEXT!=0){SUPER_ESTADOS_ID024=BILLETE_ID024; 
+1B06:  MOV.B   8FE,W0L
+1B08:  SE      W0,W0
+1B0A:  CP0     W0
+1B0C:  BRA     Z,1B14
+1B0E:  MOV.B   #1,W0L
+1B10:  MOV.B   W0L,870
+....................                   ESTADOS_ID024=DENOM_ACEPTING_ID024;} 
+1B12:  CLR.B   871
+....................      }    
+....................  } 
+.................... } 
+1B14:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void COMANDOS_ID024_BILLETE(void) 
+.................... {char ML;char COMANDO_ID024;char COMANDO2;char jk;char LONGITUD1; 
+....................   
+....................  LONGITUD1=BUFFER_ID024_RX[2]; 
+*
+0E6C:  MOV.B   814,W0L
+0E6E:  MOV.B   W0L,916
+....................  COMANDO2=BUFFER_ID024_RX[1];//SALVARLO SIN MODIFICACION 
+0E70:  MOV.B   813,W0L
+0E72:  MOV.B   W0L,914
+....................  COMANDO_ID024=COMANDO2&0X0F;//EXTRAER NIBBLE BAJO 
+0E74:  MOV.B   914,W0L
+0E76:  SE      W0,W0
+0E78:  AND     W0,#F,W0
+0E7A:  MOV.B   W0L,913
+....................   
+....................  switch(COMANDO_ID024) 
+....................    {case 0X00:SACA_ACK(); 
+0E7C:  MOV.B   913,W0L
+0E7E:  CLR.B   1
+0E80:  XOR     #0,W0
+0E82:  BRA     Z,E92
+0E84:  XOR     #1,W0
+0E86:  BRA     Z,EA0
+0E88:  XOR     #3,W0
+0E8A:  BRA     Z,F48
+0E8C:  XOR     #1,W0
+0E8E:  BRA     Z,F52
+0E90:  BRA     F5C
+0E92:  CALL    D66
+....................               MEMORIA_ESTADOS_ID024=ESTADOS_ID024; 
+0E96:  MOV.B   871,W0L
+0E98:  MOV.B   W0L,800
+....................               ESTADOS_ID024=ACTIVO_BILLETE; 
+0E9A:  MOV.B   #6,W0L
+0E9C:  MOV.B   W0L,871
+....................               break;//ENABLE 
+0E9E:  BRA     F62
+....................  
+....................     case 0X01:if(BUFFER_ID024_RX[4]!=0X2D) 
+0EA0:  MOV.B   816,W0L
+0EA2:  SE      W0,W0
+0EA4:  MOV     #2D,W4
+0EA6:  CP      W4,W0
+0EA8:  BRA     Z,EB6
+....................                 {MEMORIA_ESTADOS_ID024=ESTADOS_ID024; 
+0EAA:  MOV.B   871,W0L
+0EAC:  MOV.B   W0L,800
+....................                  SACA_ACK(); 
+0EAE:  CALL    D66
+.................... //                 if(ESTADOS_ID024==HOLDING_ID024) 
+.................... //                   {ESTADOS_ID024=REJECTED_ID024;}                  
+....................                  ESTADOS_ID024=INACTIVO_BILLETE;  
+0EB2:  MOV.B   #7,W0L
+0EB4:  MOV.B   W0L,871
+....................                 }     
+....................            
+....................               if(BUFFER_ID024_RX[4]==0X2D)//CORRESPONDE A UN ACK 
+0EB6:  MOV.B   816,W0L
+0EB8:  SE      W0,W0
+0EBA:  MOV     #2D,W4
+0EBC:  CP      W4,W0
+0EBE:  BRA     NZ,F46
+....................               {switch(ESTADOS_ID024) 
+....................                       {case DENOM_ACEPTING_ID024:ESTADOS_ID024=HOLDING_ID024;                                                 
+0EC0:  MOV.B   871,W0L
+0EC2:  CLR.B   1
+0EC4:  XOR     #0,W0
+0EC6:  BRA     Z,ED2
+0EC8:  XOR     #2,W0
+0ECA:  BRA     Z,F18
+0ECC:  XOR     #6,W0
+0ECE:  BRA     Z,F2A
+0ED0:  BRA     F46
+0ED2:  MOV.B   #1,W0L
+0ED4:  MOV.B   W0L,871
+....................                                                  if(BUFFER_ID024_RX[5]==0x04) 
+0ED6:  MOV.B   817,W0L
+0ED8:  SE      W0,W0
+0EDA:  CP      W0,#4
+0EDC:  BRA     NZ,F16
+....................                                                       {COMANDO2=BUFFER_ID024_RX[6]; 
+0EDE:  MOV.B   818,W0L
+0EE0:  MOV.B   W0L,914
+....................                                                        COMANDO2=COMANDO2&0X0F; 
+0EE2:  MOV.B   914,W0L
+0EE4:  SE      W0,W0
+0EE6:  AND     W0,#F,W0
+0EE8:  MOV.B   W0L,914
+....................                                                        if(COMANDO2==0X02){ESTADOS_ID024=ESTAKANDO_ID024;SACA_ACK();}//SI NO HAY ESPACIO INTERTRAMA 
+0EEA:  MOV.B   914,W0L
+0EEC:  SE      W0,W0
+0EEE:  CP      W0,#2
+0EF0:  BRA     NZ,EFC
+0EF2:  MOV.B   #3,W0L
+0EF4:  MOV.B   W0L,871
+0EF6:  CALL    D66
+....................                                                        else{if(COMANDO2==0X03){ESTADOS_ID024=REJECTING_ID024;SACA_ACK();COMMANDO_A_ID003=DESACTIVAR_A_ID003;} 
+0EFA:  BRA     F16
+0EFC:  MOV.B   914,W0L
+0EFE:  SE      W0,W0
+0F00:  CP      W0,#3
+0F02:  BRA     NZ,F12
+0F04:  MOV.B   #5,W0L
+0F06:  MOV.B   W0L,871
+0F08:  CALL    D66
+0F0C:  MOV.B   #3,W0L
+0F0E:  MOV.B   W0L,803
+....................                                                             else{SACA_ENABLE();}                                                                
+0F10:  BRA     F16
+0F12:  CALL    7EA
+....................                                                            }     
+....................                                                       } 
+....................                                                  break; 
+0F16:  BRA     F46
+....................                        case ESTAKED_ID024:SACA_ENABLE(); 
+0F18:  CALL    7EA
+....................                                           MEMORIA_ESTADOS_ID024=ACTIVO_BILLETE; 
+0F1C:  MOV.B   #6,W0L
+0F1E:  MOV.B   W0L,800
+....................                                           ESTADOS_ID024=ACTIVO_BILLETE; 
+0F20:  MOV.B   #6,W0L
+0F22:  MOV.B   W0L,871
+....................                                           BUFFER_BILLETES[0]=0;//SACA EL BILLETE DE LA PILA  
+0F24:  CLR.B   808
+....................                                           output_high(VISUAL_D); 
+0F26:  BSET.B  2CC.1
+....................                                           break; 
+0F28:  BRA     F46
+....................                        case REJECTED_ID024:if(MEMORIA_ESTADOS_ID024==INACTIVO_BILLETE) 
+0F2A:  MOV     800,W4
+0F2C:  CP.B    W4L,#7
+0F2E:  BRA     NZ,F3A
+....................                                              {SACA_DISABLE();ESTADOS_ID024=MEMORIA_ESTADOS_ID024;} 
+0F30:  CALL    73C
+0F34:  MOV.B   800,W0L
+0F36:  MOV.B   W0L,871
+....................                                            else{SACA_ENABLE(); 
+0F38:  BRA     F42
+0F3A:  CALL    7EA
+....................                                                 ESTADOS_ID024=ACTIVO_BILLETE;} 
+0F3E:  MOV.B   #6,W0L
+0F40:  MOV.B   W0L,871
+....................                                            output_high(VISUAL_D); 
+0F42:  BSET.B  2CC.1
+....................                                            break; 
+0F44:  BRA     F46
+....................                       } 
+....................               } 
+....................               break; 
+0F46:  BRA     F62
+....................     case 0X02:ESTADOS_ID024=ESTAKANDO_ID024;//ORDEN PASAR BILLETE 
+0F48:  MOV.B   #3,W0L
+0F4A:  MOV.B   W0L,871
+....................               SACA_ACK();break; 
+0F4C:  CALL    D66
+0F50:  BRA     F62
+....................     case 0X03:ESTADOS_ID024=REJECTING_ID024;//ORDEN PASAR BILLETE 
+0F52:  MOV.B   #5,W0L
+0F54:  MOV.B   W0L,871
+....................               SACA_ACK();break; 
+0F56:  CALL    D66
+0F5A:  BRA     F62
+....................  
+....................      
+....................     default  :SACA_ACK();break; 
+0F5C:  CALL    D66
+0F60:  BRA     F62
+....................    }  
+.................... } 
+0F62:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void ESTADOS_VER_ID024_BILLETE(void) 
+.................... {char BILLETICO;static char FLIP_FLOP=0;char jk; 
+*
+0880:  MOV     W5,[W15++]
+....................  static char VECES;char OPEX1;static char VECES_ACTIVO; 
+....................  static char VECES_INACTIVO; 
+....................  
+....................  COMMANDO_A_ID003=DESACTIVAR_A_ID003; 
+0882:  MOV.B   #3,W0L
+0884:  MOV.B   W0L,803
+....................  if(FLIP_FLOP==1){FLIP_FLOP=0;} 
+0886:  MOV.B   875,W0L
+0888:  SE      W0,W0
+088A:  CP      W0,#1
+088C:  BRA     NZ,892
+088E:  CLR.B   875
+....................  else {FLIP_FLOP=1;} 
+0890:  BRA     896
+0892:  MOV.B   #1,W0L
+0894:  MOV.B   W0L,875
+....................  
+....................  BILLETICO=BUFFER_BILLETES[0]; 
+0896:  MOV.B   808,W0L
+0898:  MOV.B   W0L,912
+....................  switch(ESTADOS_ID024) 
+....................    {case DENOM_ACEPTING_ID024:switch(BILLETICO) 
+089A:  MOV.B   871,W0L
+089C:  CLR.B   1
+089E:  XOR     #0,W0
+08A0:  BRA     Z,8C0
+08A2:  XOR     #1,W0
+08A4:  BRA     Z,ADC
+08A6:  XOR     #4,W0
+08A8:  BRA     Z,AE2
+08AA:  XOR     #1,W0
+08AC:  BRA     Z,AF8
+08AE:  XOR     #7,W0
+08B0:  BRA     Z,C10
+08B2:  XOR     #1,W0
+08B4:  BRA     Z,C26
+08B6:  XOR     #5,W0
+08B8:  BRA     Z,C82
+08BA:  XOR     #1,W0
+08BC:  BRA     Z,CA4
+08BE:  BRA     CDC
+....................                                      {case 1 :OPEX1=BILLETE_1B_ID024[2]; 
+08C0:  MOV.B   912,W0L
+08C2:  CLR.B   1
+08C4:  XOR     #1,W0
+08C6:  BRA     Z,8DA
+08C8:  XOR     #4,W0
+08CA:  BRA     Z,940
+08CC:  XOR     #F,W0
+08CE:  BRA     Z,9A6
+08D0:  XOR     #1E,W0
+08D2:  BRA     Z,A0C
+08D4:  XOR     #26,W0
+08D6:  BRA     Z,A72
+08D8:  BRA     AD8
+08DA:  MOV.B   #11,W0L
+08DC:  MOV.B   W0L,914
+....................                                               if(FLIP_FLOP=0){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_1A_ID024[jk];}} 
+08DE:  CLR.B   875
+08E0:  CP0.B   875
+08E2:  BRA     Z,908
+08E4:  CLR.B   913
+08E6:  MOV.B   913,W0L
+08E8:  MOV     914,W4
+08EA:  CP.B    W4L,W0L
+08EC:  BRA     LE,908
+08EE:  MOV.B   913,W0L
+08F0:  SE      W0,W0
+08F2:  MOV     #832,W4
+08F4:  ADD     W0,W4,W5
+08F6:  MOV.B   913,W0L
+08F8:  SE      W0,W0
+08FA:  MOV     W0,W4
+08FC:  MUL.UU  W4,#2,W0
+08FE:  CALL    2E0
+0902:  MOV.B   W0L,[W5]
+0904:  INC.B   0913
+0906:  BRA     8E6
+....................                                               if(FLIP_FLOP=1){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_1B_ID024[jk];}} 
+0908:  MOV.B   #1,W0L
+090A:  MOV.B   W0L,875
+090C:  CP0.B   875
+090E:  BRA     Z,934
+0910:  CLR.B   913
+0912:  MOV.B   913,W0L
+0914:  MOV     914,W4
+0916:  CP.B    W4L,W0L
+0918:  BRA     LE,934
+091A:  MOV.B   913,W0L
+091C:  SE      W0,W0
+091E:  MOV     #832,W4
+0920:  ADD     W0,W4,W5
+0922:  MOV.B   913,W0L
+0924:  SE      W0,W0
+0926:  MOV     W0,W4
+0928:  MUL.UU  W4,#2,W0
+092A:  CALL    30C
+092E:  MOV.B   W0L,[W5]
+0930:  INC.B   0913
+0932:  BRA     912
+....................                                               BYTES_A_ENVIAR_ID024=BILLETE_1B_ID024[2]; 
+0934:  MOV.B   #11,W0L
+0936:  MOV.B   W0L,86F
+....................                                               SACAR_DE_BUFFER(); 
+0938:  CALL    726
+....................                                               output_low(VISUAL_D); 
+093C:  BCLR.B  2CC.1
+....................                                               break; 
+093E:  BRA     ADA
+....................                                       case 5 :OPEX1=BILLETE_5B_ID024[2]; 
+0940:  MOV.B   #11,W0L
+0942:  MOV.B   W0L,914
+....................                                               if(FLIP_FLOP=0){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_5A_ID024[jk];}} 
+0944:  CLR.B   875
+0946:  CP0.B   875
+0948:  BRA     Z,96E
+094A:  CLR.B   913
+094C:  MOV.B   913,W0L
+094E:  MOV     914,W4
+0950:  CP.B    W4L,W0L
+0952:  BRA     LE,96E
+0954:  MOV.B   913,W0L
+0956:  SE      W0,W0
+0958:  MOV     #832,W4
+095A:  ADD     W0,W4,W5
+095C:  MOV.B   913,W0L
+095E:  SE      W0,W0
+0960:  MOV     W0,W4
+0962:  MUL.UU  W4,#2,W0
+0964:  CALL    338
+0968:  MOV.B   W0L,[W5]
+096A:  INC.B   0913
+096C:  BRA     94C
+....................                                               if(FLIP_FLOP=1){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_5B_ID024[jk];}} 
+096E:  MOV.B   #1,W0L
+0970:  MOV.B   W0L,875
+0972:  CP0.B   875
+0974:  BRA     Z,99A
+0976:  CLR.B   913
+0978:  MOV.B   913,W0L
+097A:  MOV     914,W4
+097C:  CP.B    W4L,W0L
+097E:  BRA     LE,99A
+0980:  MOV.B   913,W0L
+0982:  SE      W0,W0
+0984:  MOV     #832,W4
+0986:  ADD     W0,W4,W5
+0988:  MOV.B   913,W0L
+098A:  SE      W0,W0
+098C:  MOV     W0,W4
+098E:  MUL.UU  W4,#2,W0
+0990:  CALL    364
+0994:  MOV.B   W0L,[W5]
+0996:  INC.B   0913
+0998:  BRA     978
+....................                                               BYTES_A_ENVIAR_ID024=BILLETE_5B_ID024[2]; 
+099A:  MOV.B   #11,W0L
+099C:  MOV.B   W0L,86F
+....................                                               SACAR_DE_BUFFER(); 
+099E:  CALL    726
+....................                                               output_low(VISUAL_D); 
+09A2:  BCLR.B  2CC.1
+....................                                               break; 
+09A4:  BRA     ADA
+....................                                       case 10:OPEX1=BILLETE_10B_ID024[2]; 
+09A6:  MOV.B   #11,W0L
+09A8:  MOV.B   W0L,914
+....................                                               if(FLIP_FLOP=0){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_10A_ID024[jk];}} 
+09AA:  CLR.B   875
+09AC:  CP0.B   875
+09AE:  BRA     Z,9D4
+09B0:  CLR.B   913
+09B2:  MOV.B   913,W0L
+09B4:  MOV     914,W4
+09B6:  CP.B    W4L,W0L
+09B8:  BRA     LE,9D4
+09BA:  MOV.B   913,W0L
+09BC:  SE      W0,W0
+09BE:  MOV     #832,W4
+09C0:  ADD     W0,W4,W5
+09C2:  MOV.B   913,W0L
+09C4:  SE      W0,W0
+09C6:  MOV     W0,W4
+09C8:  MUL.UU  W4,#2,W0
+09CA:  CALL    390
+09CE:  MOV.B   W0L,[W5]
+09D0:  INC.B   0913
+09D2:  BRA     9B2
+....................                                               if(FLIP_FLOP=1){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_10B_ID024[jk];}} 
+09D4:  MOV.B   #1,W0L
+09D6:  MOV.B   W0L,875
+09D8:  CP0.B   875
+09DA:  BRA     Z,A00
+09DC:  CLR.B   913
+09DE:  MOV.B   913,W0L
+09E0:  MOV     914,W4
+09E2:  CP.B    W4L,W0L
+09E4:  BRA     LE,A00
+09E6:  MOV.B   913,W0L
+09E8:  SE      W0,W0
+09EA:  MOV     #832,W4
+09EC:  ADD     W0,W4,W5
+09EE:  MOV.B   913,W0L
+09F0:  SE      W0,W0
+09F2:  MOV     W0,W4
+09F4:  MUL.UU  W4,#2,W0
+09F6:  CALL    3BC
+09FA:  MOV.B   W0L,[W5]
+09FC:  INC.B   0913
+09FE:  BRA     9DE
+....................                                               BYTES_A_ENVIAR_ID024=BILLETE_10B_ID024[2]; 
+0A00:  MOV.B   #11,W0L
+0A02:  MOV.B   W0L,86F
+....................                                               SACAR_DE_BUFFER(); 
+0A04:  CALL    726
+....................                                               output_low(VISUAL_D); 
+0A08:  BCLR.B  2CC.1
+....................                                               break; 
+0A0A:  BRA     ADA
+....................                                       case 20:OPEX1=BILLETE_20B_ID024[2]; 
+0A0C:  MOV.B   #11,W0L
+0A0E:  MOV.B   W0L,914
+....................                                               if(FLIP_FLOP=0){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_20A_ID024[jk];}} 
+0A10:  CLR.B   875
+0A12:  CP0.B   875
+0A14:  BRA     Z,A3A
+0A16:  CLR.B   913
+0A18:  MOV.B   913,W0L
+0A1A:  MOV     914,W4
+0A1C:  CP.B    W4L,W0L
+0A1E:  BRA     LE,A3A
+0A20:  MOV.B   913,W0L
+0A22:  SE      W0,W0
+0A24:  MOV     #832,W4
+0A26:  ADD     W0,W4,W5
+0A28:  MOV.B   913,W0L
+0A2A:  SE      W0,W0
+0A2C:  MOV     W0,W4
+0A2E:  MUL.UU  W4,#2,W0
+0A30:  CALL    3E8
+0A34:  MOV.B   W0L,[W5]
+0A36:  INC.B   0913
+0A38:  BRA     A18
+....................                                               if(FLIP_FLOP=1){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_20B_ID024[jk];}} 
+0A3A:  MOV.B   #1,W0L
+0A3C:  MOV.B   W0L,875
+0A3E:  CP0.B   875
+0A40:  BRA     Z,A66
+0A42:  CLR.B   913
+0A44:  MOV.B   913,W0L
+0A46:  MOV     914,W4
+0A48:  CP.B    W4L,W0L
+0A4A:  BRA     LE,A66
+0A4C:  MOV.B   913,W0L
+0A4E:  SE      W0,W0
+0A50:  MOV     #832,W4
+0A52:  ADD     W0,W4,W5
+0A54:  MOV.B   913,W0L
+0A56:  SE      W0,W0
+0A58:  MOV     W0,W4
+0A5A:  MUL.UU  W4,#2,W0
+0A5C:  CALL    414
+0A60:  MOV.B   W0L,[W5]
+0A62:  INC.B   0913
+0A64:  BRA     A44
+....................                                               BYTES_A_ENVIAR_ID024=BILLETE_20B_ID024[2]; 
+0A66:  MOV.B   #11,W0L
+0A68:  MOV.B   W0L,86F
+....................                                               SACAR_DE_BUFFER(); 
+0A6A:  CALL    726
+....................                                               output_low(VISUAL_D); 
+0A6E:  BCLR.B  2CC.1
+....................                                               break; 
+0A70:  BRA     ADA
+....................                                       case 50:OPEX1=BILLETE_50B_ID024[2]; 
+0A72:  MOV.B   #11,W0L
+0A74:  MOV.B   W0L,914
+....................                                               if(FLIP_FLOP=0){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_50A_ID024[jk];}} 
+0A76:  CLR.B   875
+0A78:  CP0.B   875
+0A7A:  BRA     Z,AA0
+0A7C:  CLR.B   913
+0A7E:  MOV.B   913,W0L
+0A80:  MOV     914,W4
+0A82:  CP.B    W4L,W0L
+0A84:  BRA     LE,AA0
+0A86:  MOV.B   913,W0L
+0A88:  SE      W0,W0
+0A8A:  MOV     #832,W4
+0A8C:  ADD     W0,W4,W5
+0A8E:  MOV.B   913,W0L
+0A90:  SE      W0,W0
+0A92:  MOV     W0,W4
+0A94:  MUL.UU  W4,#2,W0
+0A96:  CALL    440
+0A9A:  MOV.B   W0L,[W5]
+0A9C:  INC.B   0913
+0A9E:  BRA     A7E
+....................                                               if(FLIP_FLOP=1){for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=BILLETE_50B_ID024[jk];}} 
+0AA0:  MOV.B   #1,W0L
+0AA2:  MOV.B   W0L,875
+0AA4:  CP0.B   875
+0AA6:  BRA     Z,ACC
+0AA8:  CLR.B   913
+0AAA:  MOV.B   913,W0L
+0AAC:  MOV     914,W4
+0AAE:  CP.B    W4L,W0L
+0AB0:  BRA     LE,ACC
+0AB2:  MOV.B   913,W0L
+0AB4:  SE      W0,W0
+0AB6:  MOV     #832,W4
+0AB8:  ADD     W0,W4,W5
+0ABA:  MOV.B   913,W0L
+0ABC:  SE      W0,W0
+0ABE:  MOV     W0,W4
+0AC0:  MUL.UU  W4,#2,W0
+0AC2:  CALL    46C
+0AC6:  MOV.B   W0L,[W5]
+0AC8:  INC.B   0913
+0ACA:  BRA     AAA
+....................                                               BYTES_A_ENVIAR_ID024=BILLETE_50B_ID024[2]; 
+0ACC:  MOV.B   #11,W0L
+0ACE:  MOV.B   W0L,86F
+....................                                               SACAR_DE_BUFFER(); 
+0AD0:  CALL    726
+....................                                               output_low(VISUAL_D); 
+0AD4:  BCLR.B  2CC.1
+....................                                               break; 
+0AD6:  BRA     ADA
+....................                                       default:break;//ERROR RESETEAR CPU 
+0AD8:  BRA     ADA
+....................                                      } 
+....................                               break; 
+0ADA:  BRA     CDC
+....................     case HOLDING_ID024:SACA_ENABLE(); 
+0ADC:  CALL    7EA
+....................                        break; 
+0AE0:  BRA     CDC
+....................     case REJECTING_ID024:VECES++; 
+0AE2:  INC.B   0876
+....................                          if(VECES==2){VECES=0;ESTADOS_ID024=REJECTED_ID024;} 
+0AE4:  MOV.B   876,W0L
+0AE6:  SE      W0,W0
+0AE8:  CP      W0,#2
+0AEA:  BRA     NZ,AF2
+0AEC:  CLR.B   876
+0AEE:  MOV.B   #4,W0L
+0AF0:  MOV.B   W0L,871
+....................                          SACA_ENABLE(); 
+0AF2:  CALL    7EA
+....................                          break; 
+0AF6:  BRA     CDC
+....................     case REJECTED_ID024: switch(BILLETICO) 
+....................                            {case 1 :OPEX1=RECHAZA_1A_ID024[2]; 
+0AF8:  MOV.B   912,W0L
+0AFA:  CLR.B   1
+0AFC:  XOR     #1,W0
+0AFE:  BRA     Z,B12
+0B00:  XOR     #4,W0
+0B02:  BRA     Z,B44
+0B04:  XOR     #F,W0
+0B06:  BRA     Z,B76
+0B08:  XOR     #1E,W0
+0B0A:  BRA     Z,BA8
+0B0C:  XOR     #26,W0
+0B0E:  BRA     Z,BDA
+0B10:  BRA     C0C
+0B12:  MOV.B   #9,W0L
+0B14:  MOV.B   W0L,914
+....................                                     for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=RECHAZA_1A_ID024[jk];} 
+0B16:  CLR.B   913
+0B18:  MOV.B   913,W0L
+0B1A:  MOV     914,W4
+0B1C:  CP.B    W4L,W0L
+0B1E:  BRA     LE,B3A
+0B20:  MOV.B   913,W0L
+0B22:  SE      W0,W0
+0B24:  MOV     #832,W4
+0B26:  ADD     W0,W4,W5
+0B28:  MOV.B   913,W0L
+0B2A:  SE      W0,W0
+0B2C:  MOV     W0,W4
+0B2E:  MUL.UU  W4,#2,W0
+0B30:  CALL    498
+0B34:  MOV.B   W0L,[W5]
+0B36:  INC.B   0913
+0B38:  BRA     B18
+....................                                     BYTES_A_ENVIAR_ID024=RECHAZA_1A_ID024[2]; 
+0B3A:  MOV.B   #9,W0L
+0B3C:  MOV.B   W0L,86F
+....................                                     SACAR_DE_BUFFER(); 
+0B3E:  CALL    726
+....................                                     break; 
+0B42:  BRA     C0E
+....................                             case 5 :OPEX1=RECHAZA_5A_ID024[2]; 
+0B44:  MOV.B   #9,W0L
+0B46:  MOV.B   W0L,914
+....................                                     for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=RECHAZA_5A_ID024[jk];} 
+0B48:  CLR.B   913
+0B4A:  MOV.B   913,W0L
+0B4C:  MOV     914,W4
+0B4E:  CP.B    W4L,W0L
+0B50:  BRA     LE,B6C
+0B52:  MOV.B   913,W0L
+0B54:  SE      W0,W0
+0B56:  MOV     #832,W4
+0B58:  ADD     W0,W4,W5
+0B5A:  MOV.B   913,W0L
+0B5C:  SE      W0,W0
+0B5E:  MOV     W0,W4
+0B60:  MUL.UU  W4,#2,W0
+0B62:  CALL    4B4
+0B66:  MOV.B   W0L,[W5]
+0B68:  INC.B   0913
+0B6A:  BRA     B4A
+....................                                     BYTES_A_ENVIAR_ID024=RECHAZA_5A_ID024[2]; 
+0B6C:  MOV.B   #9,W0L
+0B6E:  MOV.B   W0L,86F
+....................                                     SACAR_DE_BUFFER(); 
+0B70:  CALL    726
+....................                                     break; 
+0B74:  BRA     C0E
+....................                             case 10:OPEX1=RECHAZA_10A_ID024[2]; 
+0B76:  MOV.B   #9,W0L
+0B78:  MOV.B   W0L,914
+....................                                     for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=RECHAZA_10A_ID024[jk];} 
+0B7A:  CLR.B   913
+0B7C:  MOV.B   913,W0L
+0B7E:  MOV     914,W4
+0B80:  CP.B    W4L,W0L
+0B82:  BRA     LE,B9E
+0B84:  MOV.B   913,W0L
+0B86:  SE      W0,W0
+0B88:  MOV     #832,W4
+0B8A:  ADD     W0,W4,W5
+0B8C:  MOV.B   913,W0L
+0B8E:  SE      W0,W0
+0B90:  MOV     W0,W4
+0B92:  MUL.UU  W4,#2,W0
+0B94:  CALL    4D0
+0B98:  MOV.B   W0L,[W5]
+0B9A:  INC.B   0913
+0B9C:  BRA     B7C
+....................                                     BYTES_A_ENVIAR_ID024=RECHAZA_10A_ID024[2]; 
+0B9E:  MOV.B   #9,W0L
+0BA0:  MOV.B   W0L,86F
+....................                                     SACAR_DE_BUFFER(); 
+0BA2:  CALL    726
+....................                                     break; 
+0BA6:  BRA     C0E
+....................                             case 20:OPEX1=RECHAZA_20A_ID024[2]; 
+0BA8:  MOV.B   #9,W0L
+0BAA:  MOV.B   W0L,914
+....................                                     for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=RECHAZA_20A_ID024[jk];} 
+0BAC:  CLR.B   913
+0BAE:  MOV.B   913,W0L
+0BB0:  MOV     914,W4
+0BB2:  CP.B    W4L,W0L
+0BB4:  BRA     LE,BD0
+0BB6:  MOV.B   913,W0L
+0BB8:  SE      W0,W0
+0BBA:  MOV     #832,W4
+0BBC:  ADD     W0,W4,W5
+0BBE:  MOV.B   913,W0L
+0BC0:  SE      W0,W0
+0BC2:  MOV     W0,W4
+0BC4:  MUL.UU  W4,#2,W0
+0BC6:  CALL    4EC
+0BCA:  MOV.B   W0L,[W5]
+0BCC:  INC.B   0913
+0BCE:  BRA     BAE
+....................                                     BYTES_A_ENVIAR_ID024=RECHAZA_20A_ID024[2]; 
+0BD0:  MOV.B   #9,W0L
+0BD2:  MOV.B   W0L,86F
+....................                                     SACAR_DE_BUFFER(); 
+0BD4:  CALL    726
+....................                                     break; 
+0BD8:  BRA     C0E
+....................                             case 50:OPEX1=RECHAZA_50A_ID024[2]; 
+0BDA:  MOV.B   #9,W0L
+0BDC:  MOV.B   W0L,914
+....................                                     for(jk=0;jk<OPEX1;jk++){BUFER_ENVIO_ID024[jk]=RECHAZA_50A_ID024[jk];} 
+0BDE:  CLR.B   913
+0BE0:  MOV.B   913,W0L
+0BE2:  MOV     914,W4
+0BE4:  CP.B    W4L,W0L
+0BE6:  BRA     LE,C02
+0BE8:  MOV.B   913,W0L
+0BEA:  SE      W0,W0
+0BEC:  MOV     #832,W4
+0BEE:  ADD     W0,W4,W5
+0BF0:  MOV.B   913,W0L
+0BF2:  SE      W0,W0
+0BF4:  MOV     W0,W4
+0BF6:  MUL.UU  W4,#2,W0
+0BF8:  CALL    508
+0BFC:  MOV.B   W0L,[W5]
+0BFE:  INC.B   0913
+0C00:  BRA     BE0
+....................                                     BYTES_A_ENVIAR_ID024=RECHAZA_50A_ID024[2]; 
+0C02:  MOV.B   #9,W0L
+0C04:  MOV.B   W0L,86F
+....................                                     SACAR_DE_BUFFER(); 
+0C06:  CALL    726
+....................                                     break; 
+0C0A:  BRA     C0E
+....................                             default:break;//ERROR RESETEAR CPU 
+0C0C:  BRA     C0E
+....................                                      } 
+....................                          break; 
+0C0E:  BRA     CDC
+....................     case ESTAKANDO_ID024:VECES++; 
+0C10:  INC.B   0876
+....................                          if(VECES==2){VECES=0;ESTADOS_ID024=ESTAKED_ID024;} 
+0C12:  MOV.B   876,W0L
+0C14:  SE      W0,W0
+0C16:  CP      W0,#2
+0C18:  BRA     NZ,C20
+0C1A:  CLR.B   876
+0C1C:  MOV.B   #2,W0L
+0C1E:  MOV.B   W0L,871
+....................                          SACA_ENABLE(); 
+0C20:  CALL    7EA
+....................                          break; 
+0C24:  BRA     CDC
+....................   
+....................     case ESTAKED_ID024:if(FLIP_FLOP==1) 
+0C26:  MOV.B   875,W0L
+0C28:  SE      W0,W0
+0C2A:  CP      W0,#1
+0C2C:  BRA     NZ,C54
+....................                          {for(jk=0;jk<ESTAKEDA_ID024[2];jk++){BUFER_ENVIO_ID024[jk]=ESTAKEDA_ID024[jk];}} 
+0C2E:  CLR.B   913
+0C30:  MOV.B   913,W0L
+0C32:  SE      W0,W0
+0C34:  CP      W0,#5
+0C36:  BRA     GE,C52
+0C38:  MOV.B   913,W0L
+0C3A:  SE      W0,W0
+0C3C:  MOV     #832,W4
+0C3E:  ADD     W0,W4,W5
+0C40:  MOV.B   913,W0L
+0C42:  SE      W0,W0
+0C44:  MOV     W0,W4
+0C46:  MUL.UU  W4,#2,W0
+0C48:  CALL    250
+0C4C:  MOV.B   W0L,[W5]
+0C4E:  INC.B   0913
+0C50:  BRA     C30
+....................                           else{for(jk=0;jk<ESTAKEDB_ID024[2];jk++){BUFER_ENVIO_ID024[jk]=ESTAKEDB_ID024[jk];}} 
+0C52:  BRA     C78
+0C54:  CLR.B   913
+0C56:  MOV.B   913,W0L
+0C58:  SE      W0,W0
+0C5A:  CP      W0,#5
+0C5C:  BRA     GE,C78
+0C5E:  MOV.B   913,W0L
+0C60:  SE      W0,W0
+0C62:  MOV     #832,W4
+0C64:  ADD     W0,W4,W5
+0C66:  MOV.B   913,W0L
+0C68:  SE      W0,W0
+0C6A:  MOV     W0,W4
+0C6C:  MUL.UU  W4,#2,W0
+0C6E:  CALL    524
+0C72:  MOV.B   W0L,[W5]
+0C74:  INC.B   0913
+0C76:  BRA     C56
+....................                           BYTES_A_ENVIAR_ID024=ESTAKEDA_ID024[2]; 
+0C78:  MOV.B   #5,W0L
+0C7A:  MOV.B   W0L,86F
+....................                           SACAR_DE_BUFFER();                           
+0C7C:  CALL    726
+....................                        break;   
+0C80:  BRA     CDC
+....................     case INACTIVO_BILLETE:SACA_DISABLE(); 
+0C82:  CALL    73C
+....................                           VECES_ACTIVO=0; 
+0C86:  CLR.B   877
+....................                           VECES_INACTIVO++; 
+0C88:  INC.B   0878
+....................                           if(VECES_INACTIVO==10) 
+0C8A:  MOV.B   878,W0L
+0C8C:  SE      W0,W0
+0C8E:  CP      W0,#A
+0C90:  BRA     NZ,CA2
+....................                              {VECES_INACTIVO=0; 
+0C92:  CLR.B   878
+....................                               if(MEMORIA_ESTADOS_ID024==HOLDING_ID024) 
+0C94:  MOV     800,W4
+0C96:  CP.B    W4L,#1
+0C98:  BRA     NZ,CA2
+....................                                  {ESTADOS_ID024=REJECTED_ID024; 
+0C9A:  MOV.B   #4,W0L
+0C9C:  MOV.B   W0L,871
+....................                                   MEMORIA_ESTADOS_ID024=INACTIVO_BILLETE;} 
+0C9E:  MOV.B   #7,W0L
+0CA0:  MOV.B   W0L,800
+....................                              } 
+....................                           break; 
+0CA2:  BRA     CDC
+....................     case ACTIVO_BILLETE:SACA_ENABLE(); 
+0CA4:  CALL    7EA
+....................                         VECES_INACTIVO=0; 
+0CA8:  CLR.B   878
+....................                         VECES_ACTIVO++; 
+0CAA:  INC.B   0877
+....................                         if(VECES_ACTIVO==4) 
+0CAC:  MOV.B   877,W0L
+0CAE:  SE      W0,W0
+0CB0:  CP      W0,#4
+0CB2:  BRA     NZ,CDA
+....................                           {VECES_ACTIVO=0;  
+0CB4:  CLR.B   877
+....................                             if(BUFFER_BILLETES[0]==0)//SI CARGADO ULTIMO BILLETE ROTAR PILA 
+0CB6:  MOV.B   808,W0L
+0CB8:  SE      W0,W0
+0CBA:  CP0     W0
+0CBC:  BRA     NZ,CC4
+....................                                {BUFFER_BILLETES[0]=BUFFER_BILLETES[1]; 
+0CBE:  MOV.B   809,W0L
+0CC0:  MOV.B   W0L,808
+....................                                 BUFFER_BILLETES[1]=0;} 
+0CC2:  CLR.B   809
+....................  
+....................                            if(BUFFER_BILLETES[0]!=0)//DESPUES DE HABER ROTADO 
+0CC4:  MOV.B   808,W0L
+0CC6:  SE      W0,W0
+0CC8:  CP0     W0
+0CCA:  BRA     Z,CD0
+....................                               {ESTADOS_ID024=DENOM_ACEPTING_ID024; 
+0CCC:  CLR.B   871
+....................                               } 
+....................                            else{SUPER_ESTADOS_ID024=NORMAL_ID024; 
+0CCE:  BRA     CDA
+0CD0:  CLR.B   870
+....................                                 COMMANDO_A_ID003=ACTIVAR_A_ID003; 
+0CD2:  MOV.B   #2,W0L
+0CD4:  MOV.B   W0L,803
+....................                                 ESTADOS_ID024=ACTIVO;} 
+0CD6:  MOV.B   #1,W0L
+0CD8:  MOV.B   W0L,871
+....................                           } 
+....................                         break; 
+0CDA:  BRA     CDC
+....................    } 
+.................... } 
+0CDC:  MOV     [--W15],W5
+0CDE:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void COMANDOS_ID024_NORMAL(void) 
+.................... {char ML;char COMANDO_ID024;char COMANDO2;char jk;char LONGITUD1; 
+*
+0F64:  MOV     W5,[W15++]
+....................  
+....................  LONGITUD1=BUFFER_ID024_RX[2]; 
+0F66:  MOV.B   814,W0L
+0F68:  MOV.B   W0L,916
+....................  COMANDO2=BUFFER_ID024_RX[1];//SALVARLO SIN MODIFICACION 
+0F6A:  MOV.B   813,W0L
+0F6C:  MOV.B   W0L,914
+....................  COMANDO_ID024=COMANDO2&0X0F;//EXTRAER NIBBLE BAJO 
+0F6E:  MOV.B   914,W0L
+0F70:  SE      W0,W0
+0F72:  AND     W0,#F,W0
+0F74:  MOV.B   W0L,913
+.................... // output_high(VISUAL_A); 
+....................  
+....................  switch(COMANDO_ID024) 
+....................    {case 0X0F:ESTADOS_ID024=ESTADO_1; 
+0F76:  MOV.B   913,W0L
+0F78:  CLR.B   1
+0F7A:  XOR     #F,W0
+0F7C:  BRA     Z,F8C
+0F7E:  XOR     #F,W0
+0F80:  BRA     Z,FA2
+0F82:  XOR     #1,W0
+0F84:  BRA     Z,FB2
+0F86:  XOR     #3,W0
+0F88:  BRA     Z,FE2
+0F8A:  BRA     103A
+0F8C:  MOV.B   #2,W0L
+0F8E:  MOV.B   W0L,871
+....................               SUPER_ESTADOS_ID024=INICIALIZAR_ID024; 
+0F90:  MOV.B   #2,W0L
+0F92:  MOV.B   W0L,870
+....................               COMMANDO_A_ID003=RESET_A_ID003;//DESACTIVAR ACTIVATE_ID003=0; 
+0F94:  MOV.B   #1,W0L
+0F96:  MOV.B   W0L,803
+....................               output_low(VISUAL_A); 
+0F98:  BCLR.B  2C4.0
+....................               output_low(VISUAL_D); 
+0F9A:  BCLR.B  2CC.1
+....................               SACA_ACK(); 
+0F9C:  CALL    D66
+....................               break; 
+0FA0:  BRA     1040
+....................     case 0X00:ESTADOS_ID024=ACTIVO; 
+0FA2:  MOV.B   #1,W0L
+0FA4:  MOV.B   W0L,871
+....................               COMMANDO_A_ID003=ACTIVAR_A_ID003;//ACTIVAR ACTIVATE_ID003=1; 
+0FA6:  MOV.B   #2,W0L
+0FA8:  MOV.B   W0L,803
+....................               output_high(VISUAL_A); 
+0FAA:  BSET.B  2C4.0
+....................               SACA_ACK(); 
+0FAC:  CALL    D66
+....................               break; 
+0FB0:  BRA     1040
+....................     case 0X01:if(BUFFER_ID024_RX[4]!=0X2D){ESTADOS_ID024=INACTIVO;output_low(VISUAL_A); 
+0FB2:  MOV.B   816,W0L
+0FB4:  SE      W0,W0
+0FB6:  MOV     #2D,W4
+0FB8:  CP      W4,W0
+0FBA:  BRA     Z,FC8
+0FBC:  CLR.B   871
+0FBE:  BCLR.B  2C4.0
+....................                                            COMMANDO_A_ID003=DESACTIVAR_A_ID003;//DESACTIVARACTIVATE_ID003=0; 
+0FC0:  MOV.B   #3,W0L
+0FC2:  MOV.B   W0L,803
+....................                                            SACA_ACK();}//DISCRIMINAR ENTRE DESACTIVAR Y UN ACK 
+0FC4:  CALL    D66
+....................               if(BUFFER_ID024_RX[4]==0X2D)//CORRESPONDE A UN ACK 
+0FC8:  MOV.B   816,W0L
+0FCA:  SE      W0,W0
+0FCC:  MOV     #2D,W4
+0FCE:  CP      W4,W0
+0FD0:  BRA     NZ,FE0
+....................               {switch(ESTADOS_ID024) 
+....................                       {case ESTADO_2:ESTADOS_ID024=INACTIVO;break; 
+0FD2:  MOV.B   871,W0L
+0FD4:  CLR.B   1
+0FD6:  XOR     #3,W0
+0FD8:  BRA     Z,FDC
+0FDA:  BRA     FE0
+0FDC:  CLR.B   871
+0FDE:  BRA     FE0
+....................                       } 
+....................               } 
+....................               break; 
+0FE0:  BRA     1040
+....................     case 0x02:if(LONGITUD1==0X0B){ESTADOS_ID024=ESTADO_2;SACA_ACK();} 
+0FE2:  MOV.B   916,W0L
+0FE4:  SE      W0,W0
+0FE6:  CP      W0,#B
+0FE8:  BRA     NZ,FF2
+0FEA:  MOV.B   #3,W0L
+0FEC:  MOV.B   W0L,871
+0FEE:  CALL    D66
+....................               if(LONGITUD1==0X0D){SACA_ACK();} 
+0FF2:  MOV.B   916,W0L
+0FF4:  SE      W0,W0
+0FF6:  CP      W0,#D
+0FF8:  BRA     NZ,FFE
+0FFA:  CALL    D66
+....................               if(BUFFER_ID024_RX[2]==0X05) 
+0FFE:  MOV.B   814,W0L
+1000:  SE      W0,W0
+1002:  CP      W0,#5
+1004:  BRA     NZ,1038
+....................                 {for(jk=0;jk<TRAMA_VERSION_ID024[2];jk++){BUFER_ENVIO_ID024[jk]=TRAMA_VERSION_ID024[jk];} 
+1006:  CLR.B   915
+1008:  MOV.B   915,W0L
+100A:  SE      W0,W0
+100C:  MOV     #23,W4
+100E:  CP      W4,W0
+1010:  BRA     LE,102C
+1012:  MOV.B   915,W0L
+1014:  SE      W0,W0
+1016:  MOV     #832,W4
+1018:  ADD     W0,W4,W5
+101A:  MOV.B   915,W0L
+101C:  SE      W0,W0
+101E:  MOV     W0,W4
+1020:  MUL.UU  W4,#2,W0
+1022:  CALL    200
+1026:  MOV.B   W0L,[W5]
+1028:  INC.B   0915
+102A:  BRA     1008
+....................                  BYTES_A_ENVIAR_ID024=TRAMA_VERSION_ID024[2]; 
+102C:  MOV.B   #23,W0L
+102E:  MOV.B   W0L,86F
+....................                  SACAR_DE_BUFFER(); 
+1030:  CALL    726
+....................                 SUPER_ESTADOS_ID024=NORMAL_ID024;ESTADOS_ID024=INACTIVO;} 
+1034:  CLR.B   870
+1036:  CLR.B   871
+....................               break; 
+1038:  BRA     1040
+....................  
+....................     default  :SACA_ACK();break; 
+103A:  CALL    D66
+103E:  BRA     1040
+....................    } 
+....................  
+.................... } 
+1040:  MOV     [--W15],W5
+1042:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void ESTADOS_VER_ID024_NORMAL (void) 
+.................... {switch(ESTADOS_ID024) 
+....................    {case INACTIVO: SACA_DISABLE(); 
+*
+0CE0:  MOV.B   871,W0L
+0CE2:  CLR.B   1
+0CE4:  XOR     #0,W0
+0CE6:  BRA     Z,CEE
+0CE8:  XOR     #1,W0
+0CEA:  BRA     Z,CF4
+0CEC:  BRA     CFA
+0CEE:  CALL    73C
+....................                  break; 
+0CF2:  BRA     CFA
+....................     case ACTIVO: SACA_ENABLE(); 
+0CF4:  CALL    7EA
+....................                  break; 
+0CF8:  BRA     CFA
+....................    } 
+.................... } 
+0CFA:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void LISTO_BUFFER_ID024(void) 
+.................... {int16 LONGITUD=0; int16 CRC_XX=0;int16 CRC_YY; 
+*
+1044:  CLR     900
+1046:  CLR     902
+....................  char SIP_1;char SIP_2;char M1;char K;  
+....................  
+....................  if(BUFFER_ID024_RX[0]==0x04&&BUFFER_ID024_RX[1]==0)//CONTESTA MQ PREGUNTANDO ESTADOS 
+1048:  MOV.B   812,W0L
+104A:  SE      W0,W0
+104C:  CP      W0,#4
+104E:  BRA     NZ,107C
+1050:  MOV.B   813,W0L
+1052:  SE      W0,W0
+1054:  CP0     W0
+1056:  BRA     NZ,107C
+....................     {switch(SUPER_ESTADOS_ID024) 
+....................             {case INICIALIZAR_ID024:ESTADOS_VER_ID024_INICIALIZAR();break;  
+1058:  MOV.B   870,W0L
+105A:  CLR.B   1
+105C:  XOR     #2,W0
+105E:  BRA     Z,106A
+1060:  XOR     #3,W0
+1062:  BRA     Z,1070
+1064:  XOR     #1,W0
+1066:  BRA     Z,1076
+1068:  BRA     107C
+106A:  CALL    7FA
+106E:  BRA     107C
+....................              case BILLETE_ID024:ESTADOS_VER_ID024_BILLETE();break; 
+1070:  CALL    880
+1074:  BRA     107C
+....................              case NORMAL_ID024:ESTADOS_VER_ID024_NORMAL();break; 
+1076:  CALL    CE0
+107A:  BRA     107C
+....................             } 
+....................    } 
+....................  
+....................  if(BUFFER_ID024_RX[0]==0X04)//&&BUFFER_ID024_RX[2]==CONTAOR_BYTES_ID024)//COMANDOS 
+107C:  MOV.B   812,W0L
+107E:  SE      W0,W0
+1080:  CP      W0,#4
+1082:  BRA     NZ,1102
+....................      {//output_toggle(VISUAL_D); 
+....................       K=BUFFER_ID024_RX[2]-2; 
+1084:  MOV.B   814,W0L
+1086:  SE      W0,W0
+1088:  SUB     W0,#2,W0
+108A:  MOV.B   W0L,909
+....................       SIP_1=0; 
+108C:  CLR.B   906
+....................       LONGITUD=make16(SIP_1,K); 
+108E:  MOV.B   909,W0L
+1090:  MOV.B   W0L,900
+1092:  MOV.B   906,W0L
+1094:  MOV.B   W0L,901
+....................       CRC_XX=calc_crc_mch(BUFFER_ID024_RX,LONGITUD,0); 
+1096:  MOV     #812,W4
+1098:  MOV     W4,90C
+109A:  PUSH    900
+109C:  POP     90E
+109E:  CLR     910
+10A0:  CALL    CFC
+10A4:  MOV     W0,902
+....................       M1=BUFFER_ID024_RX[2]-1; 
+10A6:  MOV.B   814,W0L
+10A8:  SE      W0,W0
+10AA:  SUB     W0,#1,W0
+10AC:  MOV.B   W0L,908
+....................       SIP_1=BUFFER_ID024_RX[M1]; 
+10AE:  MOV.B   908,W0L
+10B0:  SE      W0,W0
+10B2:  MOV     #812,W4
+10B4:  ADD     W0,W4,W0
+10B6:  MOV     906,W4
+10B8:  MOV.B   [W0+#0],W4L
+10BA:  MOV     W4,906
+....................       M1=BUFFER_ID024_RX[2]-2; 
+10BC:  MOV.B   814,W0L
+10BE:  SE      W0,W0
+10C0:  SUB     W0,#2,W0
+10C2:  MOV.B   W0L,908
+....................       SIP_2=BUFFER_ID024_RX[M1]; 
+10C4:  MOV.B   908,W0L
+10C6:  SE      W0,W0
+10C8:  MOV     #812,W4
+10CA:  ADD     W0,W4,W0
+10CC:  MOV.B   [W0],W0L
+10CE:  MOV.B   W0L,907
+....................       CRC_YY=make16(SIP_2,SIP_1); 
+10D0:  MOV.B   906,W0L
+10D2:  MOV.B   W0L,904
+10D4:  MOV.B   907,W0L
+10D6:  MOV.B   W0L,905
+....................       //hallar el crc de la trama en buffer validar y entarr a procesar segun se super estados 
+....................       if(CRC_XX==CRC_YY){//output_toggle(VISUAL_A); 
+10D8:  MOV     902,W0
+10DA:  CP      904
+10DC:  BRA     NZ,1102
+....................                          switch(SUPER_ESTADOS_ID024) 
+....................                                 {case INICIALIZAR_ID024:COMANDOS_ID024_INICIALIZAR();break;  
+10DE:  MOV.B   870,W0L
+10E0:  CLR.B   1
+10E2:  XOR     #2,W0
+10E4:  BRA     Z,10F0
+10E6:  XOR     #3,W0
+10E8:  BRA     Z,10F6
+10EA:  XOR     #1,W0
+10EC:  BRA     Z,10FC
+10EE:  BRA     1102
+10F0:  CALL    D98
+10F4:  BRA     1102
+....................                                  case BILLETE_ID024:COMANDOS_ID024_BILLETE();break; 
+10F6:  CALL    E6C
+10FA:  BRA     1102
+....................                                  case NORMAL_ID024:COMANDOS_ID024_NORMAL();break; 
+10FC:  CALL    F64
+1100:  BRA     1102
+....................                                 } 
+....................                          } 
+....................  
+....................      } 
+....................  
+.................... BUFFER_ID024_RX[0]=254; 
+1102:  MOV.B   #FE,W0L
+1104:  MOV.B   W0L,812
+.................... } 
+1106:  RETURN  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //ESTADOS DE INICIALIZACION 
+.................... //ESTADO ACTIVO 
+.................... //DESACTIVO 
+.................... //ESTADO1 VIENE DESPUES DE UNA ORDEN DE RESET AL SIGUIENTE SR 
+.................... //CONTESTA TRAMA CUYO COMANDO ES10 
+.................... //ESTADO2 ENTRA AL RECIBIR 04 62 0B 00 00 00 00 34 12 58 73 
+.................... //SALE AL RECIBIR ACK; 
+.................... //CREAR UN BUFFER DE BILLETES QUE SE REVIZARA PERIODICAMENTE 
+.................... //PARA DESCARGAR MIENTRAS ESTADO BILLETE DESHABILITAR BILLETERO 
+.................... // 
+....................  
+.................... #include "\ID003.h" 
+.................... enum   {NORMAL_ID003,BILLETE_ID003,INICIALIZAR};//SUPER ESTADOS 
+....................  
+.................... enum   {NULO,INTERROGAR_ESTADOS,INTERROGAR_VERSION,POWER_UP_M,SET_C0_DATA, 
+....................         SET_C1_DATA,SET_C4_DATA,SET_C5_DATA,SET_C3_DATA,SET_C6_DATA, 
+....................         SET_C7_DATA,SET_80_DATA,SET_84_DATA,SET_81_DATA,SET_83_DATA, 
+....................         SET_86_DATA,SET_87_DATA,SET_89_DATA,ACTIVAR_DATA,DESACTIVAR_DATA, 
+....................         ESCROW,ACK_DATA,ORDEN_ESTAKAR_ID003,CONTESTAR_ACK_ID003};//ESTADOS SIMULADOS DE  MAQUINA SIMULADA EN PROCESO DE INICIALIZACION 
+....................  
+.................... enum   {DISABLE,IDLE,ACEPTING,REJECTING,DENOM_2,DENOM_5,DENOM_10, 
+....................         DENOM_20,DENOM_50,STAKING,VALID_VENT,BILL_GUARDADO, 
+....................         HOLDING};//ESTADOS EN PROCESO DE BILL 
+....................  
+....................  
+.................... unsigned char ES_VEGA=0XFF; 
+.................... unsigned char ID_CK=0; 
+.................... char  klp; 
+.................... char  EL_BILLETE_ID003=0; 
+.................... char  ARGUMENT_BILL_ID003=0; 
+.................... char  ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+.................... char  ESTADOS_ID003_BILL=NULO; 
+.................... char  SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+.................... char  BUFFER_ENVIO_ID003[50]={}; 
+.................... char  BUFFER_RX_ID003[70]={}; 
+.................... char  CONTA_ENVIO2=0; 
+.................... char  PUNT_ENV_2=0; 
+.................... char  CONTAOR_BYTES_U2=0; 
+.................... char  BANDER_BUFFER_INU2=0;//INDICA LA LLEGADA DE UN BYTE FC 
+....................  
+....................            CONST unsigned int TRAMA_B2[]             = {0xFC,0x06,0x13,0x62,0X2B,0XC9}  ; 
+....................            CONST unsigned int TRAMA_B5[]             = {0xFC,0x06,0x13,0x63,0XA2,0XD8}  ; 
+....................            CONST unsigned int TRAMA_B10[]            = {0xFC,0x06,0x13,0x64,0X1D,0XAC}  ; 
+....................            CONST unsigned int TRAMA_B20[]            = {0xFC,0x06,0x13,0x65,0X94,0XBD}  ; 
+....................            CONST unsigned int TRAMA_B50[]            = {0xFC,0x06,0x13,0x66,0X0F,0X8F}  ; 
+....................            CONST unsigned int ORDEN_PASAR[]          = {0xFC,0x05,0x42,0x39,0X036}      ; 
+....................            CONST unsigned int ESTAKANDO[]            = {0xFC,0x05,0x14,0x8A,0X01}      ; 
+....................            CONST unsigned int VENTA_VALIDA[]         = {0xFC,0x05,0x15,0x03,0X10}      ; 
+....................            CONST unsigned int GUARDADO[]             = {0xFC,0x05,0x16,0x98,0X22}      ; 
+....................            CONST unsigned int RETENIENDO[]           = {0xFC,0x05,0x19,0x6F,0XDA}      ; 
+....................                  
+....................            CONST unsigned int BILL_DESC[]       = {0xFC,0x06,0x17,0x77,0X67,0XE9}  ; 
+....................            CONST unsigned int ACEPTANDO[]       = {0xFC,0x05,0x12,0xBC,0X64}  ; 
+....................            CONST unsigned int ACTIVADO_TABLA[]  = {0XFC,0X05,0X11,0X27,0X56}  ; 
+....................            CONST unsigned int DESACTIVADO[]     = {0XFC,0X05,0X1A,0XF4,0XE8}  ;   
+....................            CONST unsigned int POWER_UP_DATA[]   = {0XFC,0X05,0X40,0X2B,0X15}  ; 
+.................... 	       CONST unsigned int INITIALIZER[]     = {0XFC,0X05,0X1B,0X7D,0XF9}  ;	                 
+....................             
+....................            CONST unsigned int SET_C0[]          = {0xFC,0x07,0xC0,0x80,0X00,0XE1,0X39}  ; 
+....................            CONST unsigned int SET_C1[]          = {0xFC,0x07,0xC1,0xFF,0X00,0X31,0X10}  ;//FF| 00| 31| 10| 
+....................            CONST unsigned int SET_C4[]          = {0xFC,0x06,0xC4,0x00,0X0C,0X9B}       ;// 00| 0C| 9B| 
+....................            CONST unsigned int SET_C5[]          = {0xFC,0x06,0xC5,0x03,0X4F,0XB0}       ;//03| 4F| B0| 
+....................            CONST unsigned int SET_C3[]          = {0xFC,0x06,0xC3,0x00,0X04,0XD6}       ;//00| 04| D6| 
+....................            CONST unsigned int SET_C6[]          = {0xFC,0x07,0xC6,0x01,0X12,0XBF,0X49}  ;//01| 12| BF| 49| 
+....................            CONST unsigned int SET_C7[]          = {0xFC,0x06,0xC7,0xFF,0X1C,0XBE}       ;//FF| 1C| BE| 
+....................  
+....................            CONST unsigned int SET_89[]          = {0xFC,0x05,0x89,0xE6,0X4E};// 
+....................            CONST unsigned int SET_80[]          = {0xFC,0x05,0x80,0x27,0XD3};// 
+....................            CONST unsigned int SET_84[]          = {0xFC,0x05,0x84,0x03,0X95};// 
+....................            CONST unsigned int SET_81[]          = {0xFC,0x05,0x81,0xAE,0XC2};// 
+....................            CONST unsigned int SET_83[]          = {0xFC,0x05,0x83,0xBC,0XE1};// 
+....................            CONST unsigned int SET_86[]          = {0xFC,0x05,0x86,0x11,0XB6};// 
+....................            CONST unsigned int SET_87[]          = {0xFC,0x05,0x87,0x98,0XA7};// 
+....................            CONST unsigned int VERSION_REQUEST[] = {0xFC,0x05,0x88,0x6F,0X5F};// 
+....................            CONST unsigned int ACK_1[]           = {0XFC,0X05,0X50,0XAA,0X05}; 
+....................  
+....................            CONST unsigned int ACTIVAR_VEGA[]    = {0XFC,0X06,0XC3,0X00,0X04,0XD6}; 
+....................            CONST unsigned int DESACTIVAR_VEGA[] = {0XFC,0X06,0XC3,0X01,0X8D,0XC7}; 
+....................  
+....................  
+....................            CONST unsigned int ACTIVAR_BILL[]    = {0XFC,0X06,0XC7,0XFC,0X87,0X8C}; 
+....................            CONST unsigned int DESACTIVAR_BILL[] = {0XFC,0X06,0XC7,0XFF,0X1C,0XBE}; 
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //char  COMMANDO_A_ID003=0; 
+.................... //char  ARGUMENTO_A_ID003=0; 
+.................... //char  COMMANDO_A_ID024=0; 
+.................... //char  ARGUMENTO_A_ID024=0; 
+.................... //char  ACTIVATE_ID003=0; 
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //RECEPCION TRAMAS DE BILLETERO 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+.................... void LISTO_BUFFER_ID003(void) 
+.................... {CONTAOR_BYTES_U2=0X00; 
+*
+11E8:  CLR.B   8FB
+....................  BANDER_BUFFER_INU2=0; 
+11EA:  CLR.B   8FC
+....................  ARGUMENT_BILL_ID003==BUFFER_RX_ID003[4]; 
+11EC:  MOV.B   87D,W0L
+11EE:  CP.B    8B8
+11F0:  BRA     Z,11F6
+11F2:  CLR.B   W0
+11F4:  BRA     11F6
+....................  ESTADOS_ID003_BILL=BUFFER_RX_ID003[3]; 
+11F6:  MOV.B   8B7,W0L
+11F8:  MOV.B   W0L,87F
+....................  
+....................  if(SUPER_ESTADOS_ID003_MQ==INICIALIZAR) 
+11FA:  MOV     880,W4
+11FC:  CP.B    W4L,#2
+11FE:  BRA     NZ,12E4
+....................   {switch(ESTADOS_ID003_BILL)//lee el estado del billetero y modifica el estado de la maquina 
+....................           {case(POWER_UP_DATA[2]):ESTADOS_ID003_MQ=POWER_UP_M; 
+1200:  MOV.B   87F,W0L
+1202:  CLR.B   1
+1204:  XOR     #40,W0
+1206:  BRA     Z,1252
+1208:  XOR     #5B,W0
+120A:  BRA     Z,1258
+120C:  XOR     #4B,W0
+120E:  BRA     Z,125E
+1210:  XOR     #D9,W0
+1212:  BRA     Z,1264
+1214:  XOR     #1,W0
+1216:  BRA     Z,126A
+1218:  XOR     #F,W0
+121A:  BRA     Z,1280
+121C:  XOR     #1,W0
+121E:  BRA     Z,1286
+1220:  XOR     #2,W0
+1222:  BRA     Z,128C
+1224:  XOR     #7,W0
+1226:  BRA     Z,1292
+1228:  XOR     #2,W0
+122A:  BRA     Z,1298
+122C:  XOR     #1,W0
+122E:  BRA     Z,129E
+1230:  XOR     #40,W0
+1232:  BRA     Z,12A4
+1234:  XOR     #1,W0
+1236:  BRA     Z,12AA
+1238:  XOR     #2,W0
+123A:  BRA     Z,12B0
+123C:  XOR     #7,W0
+123E:  BRA     Z,12B6
+1240:  XOR     #8F,W0
+1242:  BRA     Z,12BC
+1244:  XOR     #8D,W0
+1246:  BRA     Z,12D0
+1248:  XOR     #1,W0
+124A:  BRA     Z,12D6
+124C:  XOR     #DD,W0
+124E:  BRA     Z,12DC
+1250:  BRA     12E4
+1252:  MOV.B   #3,W0L
+1254:  MOV.B   W0L,87E
+....................                                                    break; 
+1256:  BRA     12E4
+....................            case(0X1B):ESTADOS_ID003_MQ=POWER_UP_M; 
+1258:  MOV.B   #3,W0L
+125A:  MOV.B   W0L,87E
+....................                                        break; 
+125C:  BRA     12E4
+....................            case(ACK_1[2]):ESTADOS_ID003_MQ=SET_89_DATA; 
+125E:  MOV.B   #11,W0L
+1260:  MOV.B   W0L,87E
+....................                                            break; 
+1262:  BRA     12E4
+....................            case(SET_89[2]):ESTADOS_ID003_MQ=INTERROGAR_VERSION; 
+1264:  MOV.B   #2,W0L
+1266:  MOV.B   W0L,87E
+....................                                             break; 
+1268:  BRA     12E4
+....................            case(VERSION_REQUEST[2]):ESTADOS_ID003_MQ=SET_87_DATA; 
+126A:  MOV.B   #10,W0L
+126C:  MOV.B   W0L,87E
+....................                                     if(BUFFER_RX_ID003[4]=='V') 
+126E:  MOV     8B8,W4
+1270:  XOR.B   #56,W4L
+1272:  BRA     NZ,127E
+....................                                         {ES_VEGA=1;ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+1274:  MOV.B   #1,W0L
+1276:  MOV.B   W0L,879
+1278:  MOV.B   #1,W0L
+127A:  MOV.B   W0L,87E
+....................                                          SUPER_ESTADOS_ID003_MQ=NORMAL_ID003;}  
+127C:  CLR.B   880
+....................                                     break; 
+127E:  BRA     12E4
+....................            case(SET_87[2]):ESTADOS_ID003_MQ=SET_86_DATA; 
+1280:  MOV.B   #F,W0L
+1282:  MOV.B   W0L,87E
+....................                                             break; 
+1284:  BRA     12E4
+....................            case(SET_86[2]):ESTADOS_ID003_MQ=SET_84_DATA; 
+1286:  MOV.B   #C,W0L
+1288:  MOV.B   W0L,87E
+....................                                             break; 
+128A:  BRA     12E4
+....................            case(SET_84[2]):ESTADOS_ID003_MQ=SET_83_DATA; 
+128C:  MOV.B   #E,W0L
+128E:  MOV.B   W0L,87E
+....................                                             break; 
+1290:  BRA     12E4
+....................            case(SET_83[2]):ESTADOS_ID003_MQ=SET_81_DATA; 
+1292:  MOV.B   #D,W0L
+1294:  MOV.B   W0L,87E
+....................                                             break; 
+1296:  BRA     12E4
+....................            case(SET_81[2]):ESTADOS_ID003_MQ=SET_80_DATA; 
+1298:  MOV.B   #B,W0L
+129A:  MOV.B   W0L,87E
+....................                                             break; 
+129C:  BRA     12E4
+....................            case(SET_80[2]):ESTADOS_ID003_MQ=SET_C0_DATA; 
+129E:  MOV.B   #4,W0L
+12A0:  MOV.B   W0L,87E
+....................                                             break; 
+12A2:  BRA     12E4
+....................            case(SET_C0[2]):ESTADOS_ID003_MQ=SET_C1_DATA; 
+12A4:  MOV.B   #5,W0L
+12A6:  MOV.B   W0L,87E
+....................                                             break; 
+12A8:  BRA     12E4
+....................            case(SET_C1[2]):ESTADOS_ID003_MQ=SET_C3_DATA; 
+12AA:  MOV.B   #8,W0L
+12AC:  MOV.B   W0L,87E
+....................                                             break; 
+12AE:  BRA     12E4
+....................            case(SET_C3[2]):ESTADOS_ID003_MQ=SET_C4_DATA; 
+12B0:  MOV.B   #6,W0L
+12B2:  MOV.B   W0L,87E
+....................                                             break; 
+12B4:  BRA     12E4
+....................            case(SET_C4[2]):ESTADOS_ID003_MQ=SET_C5_DATA; 
+12B6:  MOV.B   #7,W0L
+12B8:  MOV.B   W0L,87E
+....................                                             break; 
+12BA:  BRA     12E4
+.................... //           case(SET_C5[2]):ESTADOS_ID003_MQ=SET_C6_DATA; 
+.................... //                                            break; 
+....................            case(0X4B)     :ESTADOS_ID003_MQ=SET_C6_DATA; 
+12BC:  MOV.B   #9,W0L
+12BE:  MOV.B   W0L,87E
+....................                            if(ES_VEGA==1){ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+12C0:  MOV     878,W4
+12C2:  LSR     W4,#8,W4
+12C4:  CP.B    W4L,#1
+12C6:  BRA     NZ,12CE
+12C8:  MOV.B   #1,W0L
+12CA:  MOV.B   W0L,87E
+....................                                           SUPER_ESTADOS_ID003_MQ=NORMAL_ID003; 
+12CC:  CLR.B   880
+....................                                          } 
+....................                            break; 
+12CE:  BRA     12E4
+....................            case(SET_C6[2]):ESTADOS_ID003_MQ=SET_C7_DATA; 
+12D0:  MOV.B   #A,W0L
+12D2:  MOV.B   W0L,87E
+....................                                             break; 
+12D4:  BRA     12E4
+....................            case(SET_C7[2]):ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;//AQUI MODIFICAR SUPER ESTADOS 
+12D6:  MOV.B   #1,W0L
+12D8:  MOV.B   W0L,87E
+....................                                             break; 
+12DA:  BRA     12E4
+....................            case(0X1A):ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;//AQUI MODIFICAR SUPER ESTADOS 
+12DC:  MOV.B   #1,W0L
+12DE:  MOV.B   W0L,87E
+....................                                        SUPER_ESTADOS_ID003_MQ=NORMAL_ID003; 
+12E0:  CLR.B   880
+....................                                        break; 
+12E2:  BRA     12E4
+....................           } 
+....................   }  
+....................  
+.................... if(SUPER_ESTADOS_ID003_MQ==NORMAL_ID003) 
+12E4:  CP0.B   880
+12E6:  BRA     NZ,1370
+....................    {switch(ESTADOS_ID003_BILL)//lee el estado del billetero y modifica el estado de la maquina 
+....................           {case(POWER_UP_DATA[2]):SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+12E8:  MOV.B   87F,W0L
+12EA:  CLR.B   1
+12EC:  XOR     #40,W0
+12EE:  BRA     Z,130A
+12F0:  XOR     #5B,W0
+12F2:  BRA     Z,1314
+12F4:  XOR     #1,W0
+12F6:  BRA     Z,131E
+12F8:  XOR     #B,W0
+12FA:  BRA     Z,132C
+12FC:  XOR     #3,W0
+12FE:  BRA     Z,133A
+1300:  XOR     #D5,W0
+1302:  BRA     Z,1344
+1304:  XOR     #4,W0
+1306:  BRA     Z,135A
+1308:  BRA     1370
+130A:  MOV.B   #2,W0L
+130C:  MOV.B   W0L,880
+....................                                   ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+130E:  MOV.B   #1,W0L
+1310:  MOV.B   W0L,87E
+....................                                   break; 
+1312:  BRA     1370
+....................            case(0X1B):SUPER_ESTADOS_ID003_MQ=INICIALIZAR;//BILLETERO REPORTA INICIALIZANDO 
+1314:  MOV.B   #2,W0L
+1316:  MOV.B   W0L,880
+....................                                   ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+1318:  MOV.B   #1,W0L
+131A:  MOV.B   W0L,87E
+....................                                   break; 
+131C:  BRA     1370
+....................            case(DESACTIVADO[2]):if(ACTIVATE_ID003==1)//SE REPORTA DESACTIVADO EL BILL PERO DEBERIA ESTAR ACTIVADO 
+131E:  MOV.B   807,W0L
+1320:  SE      W0,W0
+1322:  CP      W0,#1
+1324:  BRA     NZ,132A
+....................                                    {ESTADOS_ID003_MQ=ACTIVAR_DATA;} 
+1326:  MOV.B   #12,W0L
+1328:  MOV.B   W0L,87E
+....................                                   break; 
+132A:  BRA     1370
+....................            case(ACTIVADO_TABLA[2]):if(ACTIVATE_ID003==0)//SE REPORTA DESACTIVADO EL BILL PERO DEBERIA ESTAR ACTIVADO 
+132C:  MOV.B   807,W0L
+132E:  SE      W0,W0
+1330:  CP0     W0
+1332:  BRA     NZ,1338
+....................                                    {ESTADOS_ID003_MQ=DESACTIVAR_DATA;} 
+1334:  MOV.B   #13,W0L
+1336:  MOV.B   W0L,87E
+....................                                    break; 
+1338:  BRA     1370
+....................            case(ACEPTANDO[2])     :ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+133A:  MOV.B   #1,W0L
+133C:  MOV.B   W0L,87E
+....................                                    SUPER_ESTADOS_ID003_MQ=BILLETE_ID003; 
+133E:  MOV.B   #1,W0L
+1340:  MOV.B   W0L,880
+....................                                    break; 
+1342:  BRA     1370
+....................            case(ACTIVAR_BILL[2]):if(ESTADOS_ID003_MQ==ACTIVAR_DATA)//RESPUESTA 
+1344:  MOV     87E,W4
+1346:  CP.B    W4L,#12
+1348:  BRA     NZ,134E
+....................                                    {ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;} 
+134A:  MOV.B   #1,W0L
+134C:  MOV.B   W0L,87E
+....................                                  if(ESTADOS_ID003_MQ==DESACTIVAR_DATA)//RESPUESTA 
+134E:  MOV     87E,W4
+1350:  CP.B    W4L,#13
+1352:  BRA     NZ,1358
+....................                                    {ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;} 
+1354:  MOV.B   #1,W0L
+1356:  MOV.B   W0L,87E
+....................                                  break; 
+1358:  BRA     1370
+....................            case(ACTIVAR_VEGA[2]):if(ESTADOS_ID003_MQ==ACTIVAR_DATA)//RESPUESTA 
+135A:  MOV     87E,W4
+135C:  CP.B    W4L,#12
+135E:  BRA     NZ,1364
+....................                                    {ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;} 
+1360:  MOV.B   #1,W0L
+1362:  MOV.B   W0L,87E
+....................                                  if(ESTADOS_ID003_MQ==DESACTIVAR_DATA)//RESPUESTA 
+1364:  MOV     87E,W4
+1366:  CP.B    W4L,#13
+1368:  BRA     NZ,136E
+....................                                    {ESTADOS_ID003_MQ=INTERROGAR_ESTADOS;} 
+136A:  MOV.B   #1,W0L
+136C:  MOV.B   W0L,87E
+....................                                  break; 
+136E:  BRA     1370
+....................           } 
+....................    } 
+....................  
+.................... if(SUPER_ESTADOS_ID003_MQ==BILLETE_ID003)//RECIBE DE BILL 
+1370:  MOV     880,W4
+1372:  CP.B    W4L,#1
+1374:  BRA     NZ,1406
+....................    {switch(ESTADOS_ID003_BILL) 
+....................           {case(TRAMA_B2[2]):EL_BILLETE_ID003=BUFFER_RX_ID003[4]; 
+1376:  MOV.B   87F,W0L
+1378:  CLR.B   1
+137A:  XOR     #13,W0
+137C:  BRA     Z,138C
+137E:  XOR     #43,W0
+1380:  BRA     Z,1396
+1382:  XOR     #45,W0
+1384:  BRA     Z,13A8
+1386:  XOR     #4,W0
+1388:  BRA     Z,13FE
+138A:  BRA     1406
+138C:  MOV.B   8B8,W0L
+138E:  MOV.B   W0L,87C
+....................                              ESTADOS_ID003_MQ=ORDEN_ESTAKAR_ID003; 
+1390:  MOV.B   #16,W0L
+1392:  MOV.B   W0L,87E
+....................                              break; 
+1394:  BRA     1406
+....................            case(ACK_1[2]):switch(ESTADOS_ID003_MQ) 
+....................                                 {case(ORDEN_ESTAKAR_ID003):ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+1396:  MOV.B   87E,W0L
+1398:  CLR.B   1
+139A:  XOR     #16,W0
+139C:  BRA     Z,13A0
+139E:  BRA     13A6
+13A0:  MOV.B   #1,W0L
+13A2:  MOV.B   W0L,87E
+....................                                                            break;                                       
+13A4:  BRA     13A6
+....................                                        
+....................                                 }                           
+....................                           break; 
+13A6:  BRA     1406
+....................            case(VENTA_VALIDA[2]):ESTADOS_ID003_MQ=CONTESTAR_ACK_ID003; 
+13A8:  MOV.B   #17,W0L
+13AA:  MOV.B   W0L,87E
+....................                                  switch(EL_BILLETE_ID003) 
+....................                                         {case(0x61):BUFFER_BILLETES[0]=1; 
+13AC:  MOV.B   87C,W0L
+13AE:  CLR.B   1
+13B0:  XOR     #61,W0
+13B2:  BRA     Z,13CA
+13B4:  XOR     #3,W0
+13B6:  BRA     Z,13D2
+13B8:  XOR     #1,W0
+13BA:  BRA     Z,13DC
+13BC:  XOR     #7,W0
+13BE:  BRA     Z,13E4
+13C0:  XOR     #1,W0
+13C2:  BRA     Z,13EC
+13C4:  XOR     #3,W0
+13C6:  BRA     Z,13F4
+13C8:  BRA     13FC
+13CA:  MOV.B   #1,W0L
+13CC:  MOV.B   W0L,808
+....................                                                     BUFFER_BILLETES[1]=0; 
+13CE:  CLR.B   809
+....................                                                     break; 
+13D0:  BRA     13FC
+....................                                          case(0x62):BUFFER_BILLETES[0]=1; 
+13D2:  MOV.B   #1,W0L
+13D4:  MOV.B   W0L,808
+....................                                                     BUFFER_BILLETES[1]=1; 
+13D6:  MOV.B   #1,W0L
+13D8:  MOV.B   W0L,809
+....................                                                     break; 
+13DA:  BRA     13FC
+....................                                          case(0x63):BUFFER_BILLETES[0]=5; 
+13DC:  MOV.B   #5,W0L
+13DE:  MOV.B   W0L,808
+....................                                                     BUFFER_BILLETES[1]=0; 
+13E0:  CLR.B   809
+....................                                                     break; 
+13E2:  BRA     13FC
+....................                                          case(0x64):BUFFER_BILLETES[0]=10; 
+13E4:  MOV.B   #A,W0L
+13E6:  MOV.B   W0L,808
+....................                                                     BUFFER_BILLETES[1]=0; 
+13E8:  CLR.B   809
+....................                                                     break; 
+13EA:  BRA     13FC
+....................                                          case(0x65):BUFFER_BILLETES[0]=20; 
+13EC:  MOV.B   #14,W0L
+13EE:  MOV.B   W0L,808
+....................                                                     BUFFER_BILLETES[1]=0; 
+13F0:  CLR.B   809
+....................                                                     break; 
+13F2:  BRA     13FC
+....................                                          case(0x66):BUFFER_BILLETES[0]=50; 
+13F4:  MOV.B   #32,W0L
+13F6:  MOV.B   W0L,808
+....................                                                     BUFFER_BILLETES[1]=0; 
+13F8:  CLR.B   809
+....................                                                     break; 
+13FA:  BRA     13FC
+....................                                         } 
+....................                                  break; 
+13FC:  BRA     1406
+....................            case(ACTIVADO_TABLA[2]):SUPER_ESTADOS_ID003_MQ=NORMAL_ID003; 
+13FE:  CLR.B   880
+....................                                    ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+1400:  MOV.B   #1,W0L
+1402:  MOV.B   W0L,87E
+....................                                    break; 
+1404:  BRA     1406
+....................  
+....................           } 
+....................    } 
+....................  
+....................                       
+.................... } 
+1406:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+....................  
+....................  
+.................... void PROCESAR_COMANDOS_DE_ID024(void) 
+.................... {switch(COMMANDO_A_ID003) 
+....................   {case ACTIVAR_A_ID003:ACTIVATE_ID003=1; 
+*
+1474:  MOV.B   803,W0L
+1476:  CLR.B   1
+1478:  XOR     #2,W0
+147A:  BRA     Z,1486
+147C:  XOR     #1,W0
+147E:  BRA     Z,148E
+1480:  XOR     #2,W0
+1482:  BRA     Z,1494
+1484:  BRA     14A2
+1486:  MOV.B   #1,W0L
+1488:  MOV.B   W0L,807
+....................                         COMMANDO_A_ID003=0;//MARCA COMO PROCESADO   
+148A:  CLR.B   803
+....................                         break; 
+148C:  BRA     14A2
+....................    case DESACTIVAR_A_ID003:ACTIVATE_ID003=0; 
+148E:  CLR.B   807
+....................                         COMMANDO_A_ID003=0;//MARCA COMO PROCESADO   
+1490:  CLR.B   803
+....................                         break; 
+1492:  BRA     14A2
+....................    case RESET_A_ID003:ACTIVATE_ID003=0; 
+1494:  CLR.B   807
+....................                       COMMANDO_A_ID003=0;//MARCA COMO PROCESADO   
+1496:  CLR.B   803
+....................                       SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+1498:  MOV.B   #2,W0L
+149A:  MOV.B   W0L,880
+....................                       ESTADOS_ID003_MQ=POWER_UP_M; 
+149C:  MOV.B   #3,W0L
+149E:  MOV.B   W0L,87E
+....................                       break; 
+14A0:  BRA     14A2
+....................  
+....................   } 
+....................  
+.................... } 
+14A2:  RETURN  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //ARRIBA RESPUESTA DE BILLETERO 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //ACCION TEMPORAL DE LA MAQUINA 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... void TEMPO_ID003(void) 
+.................... {char ik; 
+*
+14B6:  MOV     W5,[W15++]
+....................  
+....................  PROCESAR_COMANDOS_DE_ID024(); 
+14B8:  CALL    1474
+....................  if(SUPER_ESTADOS_ID003_MQ==INICIALIZAR) 
+14BC:  MOV     880,W4
+14BE:  CP.B    W4L,#2
+14C0:  BRA     NZ,18E6
+....................  {switch(ESTADOS_ID003_MQ)//estados simulados de la maquina 
+....................         {case(INTERROGAR_ESTADOS):for(ik=0;ik<ACTIVADO_TABLA[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVADO_TABLA[ik];} 
+14C2:  MOV.B   87E,W0L
+14C4:  CLR.B   1
+14C6:  XOR     #1,W0
+14C8:  BRA     Z,150C
+14CA:  XOR     #2,W0
+14CC:  BRA     Z,1546
+14CE:  XOR     #12,W0
+14D0:  BRA     Z,1580
+14D2:  XOR     #13,W0
+14D4:  BRA     Z,15BA
+14D6:  XOR     #12,W0
+14D8:  BRA     Z,15F4
+14DA:  XOR     #1F,W0
+14DC:  BRA     Z,162E
+14DE:  XOR     #3,W0
+14E0:  BRA     Z,1668
+14E2:  XOR     #2,W0
+14E4:  BRA     Z,16A2
+14E6:  XOR     #3,W0
+14E8:  BRA     Z,16DC
+14EA:  XOR     #6,W0
+14EC:  BRA     Z,1716
+14EE:  XOR     #F,W0
+14F0:  BRA     Z,1750
+14F2:  XOR     #1,W0
+14F4:  BRA     Z,178A
+14F6:  XOR     #D,W0
+14F8:  BRA     Z,17C4
+14FA:  XOR     #E,W0
+14FC:  BRA     Z,17FE
+14FE:  XOR     #1,W0
+1500:  BRA     Z,1838
+1502:  XOR     #E,W0
+1504:  BRA     Z,1872
+1506:  XOR     #3,W0
+1508:  BRA     Z,18AC
+150A:  BRA     18E6
+150C:  CLR.B   8FE
+150E:  MOV.B   8FE,W0L
+1510:  SE      W0,W0
+1512:  CP      W0,#5
+1514:  BRA     GE,1530
+1516:  MOV.B   8FE,W0L
+1518:  SE      W0,W0
+151A:  MOV     #882,W4
+151C:  ADD     W0,W4,W5
+151E:  MOV.B   8FE,W0L
+1520:  SE      W0,W0
+1522:  MOV     W0,W4
+1524:  MUL.UU  W4,#2,W0
+1526:  CALL    54C
+152A:  MOV.B   W0L,[W5]
+152C:  INC.B   08FE
+152E:  BRA     150E
+....................                                                                       CONTA_ENVIO2=ACTIVADO_TABLA[1];PUNT_ENV_2=1; 
+1530:  MOV.B   #5,W0L
+1532:  MOV.B   W0L,881
+1534:  MOV.B   #1,W0L
+1536:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1538:  CLR.B   902
+153A:  MOV.B   882,W0L
+153C:  MOV.B   W0L,903
+153E:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+1542:  BSET.B  97.7
+....................                                                                       break; 
+1544:  BRA     18E6
+....................          case(POWER_UP_M):for(ik=0;ik<POWER_UP_DATA[1];ik++){BUFFER_ENVIO_ID003[ik]=POWER_UP_DATA[ik];} 
+1546:  CLR.B   8FE
+1548:  MOV.B   8FE,W0L
+154A:  SE      W0,W0
+154C:  CP      W0,#5
+154E:  BRA     GE,156A
+1550:  MOV.B   8FE,W0L
+1552:  SE      W0,W0
+1554:  MOV     #882,W4
+1556:  ADD     W0,W4,W5
+1558:  MOV.B   8FE,W0L
+155A:  SE      W0,W0
+155C:  MOV     W0,W4
+155E:  MUL.UU  W4,#2,W0
+1560:  CALL    560
+1564:  MOV.B   W0L,[W5]
+1566:  INC.B   08FE
+1568:  BRA     1548
+....................                                                                       CONTA_ENVIO2=POWER_UP_DATA[1];PUNT_ENV_2=1; 
+156A:  MOV.B   #5,W0L
+156C:  MOV.B   W0L,881
+156E:  MOV.B   #1,W0L
+1570:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1572:  CLR.B   902
+1574:  MOV.B   882,W0L
+1576:  MOV.B   W0L,903
+1578:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+157C:  BSET.B  97.7
+....................                                                                       break; 
+157E:  BRA     18E6
+....................          case(SET_89_DATA):for(ik=0;ik<SET_89[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_89[ik];} 
+1580:  CLR.B   8FE
+1582:  MOV.B   8FE,W0L
+1584:  SE      W0,W0
+1586:  CP      W0,#5
+1588:  BRA     GE,15A4
+158A:  MOV.B   8FE,W0L
+158C:  SE      W0,W0
+158E:  MOV     #882,W4
+1590:  ADD     W0,W4,W5
+1592:  MOV.B   8FE,W0L
+1594:  SE      W0,W0
+1596:  MOV     W0,W4
+1598:  MUL.UU  W4,#2,W0
+159A:  CALL    614
+159E:  MOV.B   W0L,[W5]
+15A0:  INC.B   08FE
+15A2:  BRA     1582
+....................                                                                       CONTA_ENVIO2=SET_89[1];PUNT_ENV_2=1; 
+15A4:  MOV.B   #5,W0L
+15A6:  MOV.B   W0L,881
+15A8:  MOV.B   #1,W0L
+15AA:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+15AC:  CLR.B   902
+15AE:  MOV.B   882,W0L
+15B0:  MOV.B   W0L,903
+15B2:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+15B6:  BSET.B  97.7
+....................                                                                       break; 
+15B8:  BRA     18E6
+....................          case(INTERROGAR_VERSION):for(ik=0;ik<VERSION_REQUEST[1];ik++){BUFFER_ENVIO_ID003[ik]=VERSION_REQUEST[ik];} 
+15BA:  CLR.B   8FE
+15BC:  MOV.B   8FE,W0L
+15BE:  SE      W0,W0
+15C0:  CP      W0,#5
+15C2:  BRA     GE,15DE
+15C4:  MOV.B   8FE,W0L
+15C6:  SE      W0,W0
+15C8:  MOV     #882,W4
+15CA:  ADD     W0,W4,W5
+15CC:  MOV.B   8FE,W0L
+15CE:  SE      W0,W0
+15D0:  MOV     W0,W4
+15D2:  MUL.UU  W4,#2,W0
+15D4:  CALL    6A0
+15D8:  MOV.B   W0L,[W5]
+15DA:  INC.B   08FE
+15DC:  BRA     15BC
+....................                                                                       CONTA_ENVIO2=VERSION_REQUEST[1];PUNT_ENV_2=1; 
+15DE:  MOV.B   #5,W0L
+15E0:  MOV.B   W0L,881
+15E2:  MOV.B   #1,W0L
+15E4:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+15E6:  CLR.B   902
+15E8:  MOV.B   882,W0L
+15EA:  MOV.B   W0L,903
+15EC:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+15F0:  BSET.B  97.7
+....................                                                                       break; 
+15F2:  BRA     18E6
+....................          case(SET_87_DATA):for(ik=0;ik<SET_87[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_87[ik];} 
+15F4:  CLR.B   8FE
+15F6:  MOV.B   8FE,W0L
+15F8:  SE      W0,W0
+15FA:  CP      W0,#5
+15FC:  BRA     GE,1618
+15FE:  MOV.B   8FE,W0L
+1600:  SE      W0,W0
+1602:  MOV     #882,W4
+1604:  ADD     W0,W4,W5
+1606:  MOV.B   8FE,W0L
+1608:  SE      W0,W0
+160A:  MOV     W0,W4
+160C:  MUL.UU  W4,#2,W0
+160E:  CALL    68C
+1612:  MOV.B   W0L,[W5]
+1614:  INC.B   08FE
+1616:  BRA     15F6
+....................                                                                       CONTA_ENVIO2=SET_87[1];PUNT_ENV_2=1; 
+1618:  MOV.B   #5,W0L
+161A:  MOV.B   W0L,881
+161C:  MOV.B   #1,W0L
+161E:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1620:  CLR.B   902
+1622:  MOV.B   882,W0L
+1624:  MOV.B   W0L,903
+1626:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+162A:  BSET.B  97.7
+....................                                                                       break; 
+162C:  BRA     18E6
+....................          case(SET_86_DATA):for(ik=0;ik<SET_86[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_86[ik];} 
+162E:  CLR.B   8FE
+1630:  MOV.B   8FE,W0L
+1632:  SE      W0,W0
+1634:  CP      W0,#5
+1636:  BRA     GE,1652
+1638:  MOV.B   8FE,W0L
+163A:  SE      W0,W0
+163C:  MOV     #882,W4
+163E:  ADD     W0,W4,W5
+1640:  MOV.B   8FE,W0L
+1642:  SE      W0,W0
+1644:  MOV     W0,W4
+1646:  MUL.UU  W4,#2,W0
+1648:  CALL    678
+164C:  MOV.B   W0L,[W5]
+164E:  INC.B   08FE
+1650:  BRA     1630
+....................                                                                       CONTA_ENVIO2=SET_86[1];PUNT_ENV_2=1; 
+1652:  MOV.B   #5,W0L
+1654:  MOV.B   W0L,881
+1656:  MOV.B   #1,W0L
+1658:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+165A:  CLR.B   902
+165C:  MOV.B   882,W0L
+165E:  MOV.B   W0L,903
+1660:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+1664:  BSET.B  97.7
+....................                                                                       break; 
+1666:  BRA     18E6
+....................          case(SET_84_DATA):for(ik=0;ik<SET_84[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_84[ik];} 
+1668:  CLR.B   8FE
+166A:  MOV.B   8FE,W0L
+166C:  SE      W0,W0
+166E:  CP      W0,#5
+1670:  BRA     GE,168C
+1672:  MOV.B   8FE,W0L
+1674:  SE      W0,W0
+1676:  MOV     #882,W4
+1678:  ADD     W0,W4,W5
+167A:  MOV.B   8FE,W0L
+167C:  SE      W0,W0
+167E:  MOV     W0,W4
+1680:  MUL.UU  W4,#2,W0
+1682:  CALL    63C
+1686:  MOV.B   W0L,[W5]
+1688:  INC.B   08FE
+168A:  BRA     166A
+....................                                                                       CONTA_ENVIO2=SET_84[1];PUNT_ENV_2=1; 
+168C:  MOV.B   #5,W0L
+168E:  MOV.B   W0L,881
+1690:  MOV.B   #1,W0L
+1692:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1694:  CLR.B   902
+1696:  MOV.B   882,W0L
+1698:  MOV.B   W0L,903
+169A:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+169E:  BSET.B  97.7
+....................                                                                       break; 
+16A0:  BRA     18E6
+....................          case(SET_83_DATA):for(ik=0;ik<SET_83[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_83[ik];} 
+16A2:  CLR.B   8FE
+16A4:  MOV.B   8FE,W0L
+16A6:  SE      W0,W0
+16A8:  CP      W0,#5
+16AA:  BRA     GE,16C6
+16AC:  MOV.B   8FE,W0L
+16AE:  SE      W0,W0
+16B0:  MOV     #882,W4
+16B2:  ADD     W0,W4,W5
+16B4:  MOV.B   8FE,W0L
+16B6:  SE      W0,W0
+16B8:  MOV     W0,W4
+16BA:  MUL.UU  W4,#2,W0
+16BC:  CALL    664
+16C0:  MOV.B   W0L,[W5]
+16C2:  INC.B   08FE
+16C4:  BRA     16A4
+....................                                                                       CONTA_ENVIO2=SET_83[1];PUNT_ENV_2=1; 
+16C6:  MOV.B   #5,W0L
+16C8:  MOV.B   W0L,881
+16CA:  MOV.B   #1,W0L
+16CC:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+16CE:  CLR.B   902
+16D0:  MOV.B   882,W0L
+16D2:  MOV.B   W0L,903
+16D4:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+16D8:  BSET.B  97.7
+....................                                                                       break; 
+16DA:  BRA     18E6
+....................          case(SET_81_DATA):for(ik=0;ik<SET_81[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_81[ik];} 
+16DC:  CLR.B   8FE
+16DE:  MOV.B   8FE,W0L
+16E0:  SE      W0,W0
+16E2:  CP      W0,#5
+16E4:  BRA     GE,1700
+16E6:  MOV.B   8FE,W0L
+16E8:  SE      W0,W0
+16EA:  MOV     #882,W4
+16EC:  ADD     W0,W4,W5
+16EE:  MOV.B   8FE,W0L
+16F0:  SE      W0,W0
+16F2:  MOV     W0,W4
+16F4:  MUL.UU  W4,#2,W0
+16F6:  CALL    650
+16FA:  MOV.B   W0L,[W5]
+16FC:  INC.B   08FE
+16FE:  BRA     16DE
+....................                                                                       CONTA_ENVIO2=SET_81[1];PUNT_ENV_2=1; 
+1700:  MOV.B   #5,W0L
+1702:  MOV.B   W0L,881
+1704:  MOV.B   #1,W0L
+1706:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1708:  CLR.B   902
+170A:  MOV.B   882,W0L
+170C:  MOV.B   W0L,903
+170E:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+1712:  BSET.B  97.7
+....................                                                                       break; 
+1714:  BRA     18E6
+....................          case(SET_80_DATA):for(ik=0;ik<SET_80[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_80[ik];} 
+1716:  CLR.B   8FE
+1718:  MOV.B   8FE,W0L
+171A:  SE      W0,W0
+171C:  CP      W0,#5
+171E:  BRA     GE,173A
+1720:  MOV.B   8FE,W0L
+1722:  SE      W0,W0
+1724:  MOV     #882,W4
+1726:  ADD     W0,W4,W5
+1728:  MOV.B   8FE,W0L
+172A:  SE      W0,W0
+172C:  MOV     W0,W4
+172E:  MUL.UU  W4,#2,W0
+1730:  CALL    628
+1734:  MOV.B   W0L,[W5]
+1736:  INC.B   08FE
+1738:  BRA     1718
+....................                                                                       CONTA_ENVIO2=SET_80[1];PUNT_ENV_2=1; 
+173A:  MOV.B   #5,W0L
+173C:  MOV.B   W0L,881
+173E:  MOV.B   #1,W0L
+1740:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1742:  CLR.B   902
+1744:  MOV.B   882,W0L
+1746:  MOV.B   W0L,903
+1748:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+174C:  BSET.B  97.7
+....................                                                                       break; 
+174E:  BRA     18E6
+....................          case(SET_C0_DATA):for(ik=0;ik<SET_C0[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C0[ik];} 
+1750:  CLR.B   8FE
+1752:  MOV.B   8FE,W0L
+1754:  SE      W0,W0
+1756:  CP      W0,#7
+1758:  BRA     GE,1774
+175A:  MOV.B   8FE,W0L
+175C:  SE      W0,W0
+175E:  MOV     #882,W4
+1760:  ADD     W0,W4,W5
+1762:  MOV.B   8FE,W0L
+1764:  SE      W0,W0
+1766:  MOV     W0,W4
+1768:  MUL.UU  W4,#2,W0
+176A:  CALL    574
+176E:  MOV.B   W0L,[W5]
+1770:  INC.B   08FE
+1772:  BRA     1752
+....................                                                                       CONTA_ENVIO2=SET_C0[1];PUNT_ENV_2=1; 
+1774:  MOV.B   #7,W0L
+1776:  MOV.B   W0L,881
+1778:  MOV.B   #1,W0L
+177A:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+177C:  CLR.B   902
+177E:  MOV.B   882,W0L
+1780:  MOV.B   W0L,903
+1782:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+1786:  BSET.B  97.7
+....................  
+....................  
+....................                                                                       break; 
+1788:  BRA     18E6
+....................          case(SET_C1_DATA):for(ik=0;ik<SET_C1[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C1[ik];} 
+178A:  CLR.B   8FE
+178C:  MOV.B   8FE,W0L
+178E:  SE      W0,W0
+1790:  CP      W0,#7
+1792:  BRA     GE,17AE
+1794:  MOV.B   8FE,W0L
+1796:  SE      W0,W0
+1798:  MOV     #882,W4
+179A:  ADD     W0,W4,W5
+179C:  MOV.B   8FE,W0L
+179E:  SE      W0,W0
+17A0:  MOV     W0,W4
+17A2:  MUL.UU  W4,#2,W0
+17A4:  CALL    58C
+17A8:  MOV.B   W0L,[W5]
+17AA:  INC.B   08FE
+17AC:  BRA     178C
+....................                                                                       CONTA_ENVIO2=SET_C1[1];PUNT_ENV_2=1; 
+17AE:  MOV.B   #7,W0L
+17B0:  MOV.B   W0L,881
+17B2:  MOV.B   #1,W0L
+17B4:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+17B6:  CLR.B   902
+17B8:  MOV.B   882,W0L
+17BA:  MOV.B   W0L,903
+17BC:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+17C0:  BSET.B  97.7
+....................                                                                       break; 
+17C2:  BRA     18E6
+....................          case(SET_C3_DATA):for(ik=0;ik<SET_C3[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C3[ik];} 
+17C4:  CLR.B   8FE
+17C6:  MOV.B   8FE,W0L
+17C8:  SE      W0,W0
+17CA:  CP      W0,#6
+17CC:  BRA     GE,17E8
+17CE:  MOV.B   8FE,W0L
+17D0:  SE      W0,W0
+17D2:  MOV     #882,W4
+17D4:  ADD     W0,W4,W5
+17D6:  MOV.B   8FE,W0L
+17D8:  SE      W0,W0
+17DA:  MOV     W0,W4
+17DC:  MUL.UU  W4,#2,W0
+17DE:  CALL    5D0
+17E2:  MOV.B   W0L,[W5]
+17E4:  INC.B   08FE
+17E6:  BRA     17C6
+....................                                                                       CONTA_ENVIO2=SET_C3[1];PUNT_ENV_2=1; 
+17E8:  MOV.B   #6,W0L
+17EA:  MOV.B   W0L,881
+17EC:  MOV.B   #1,W0L
+17EE:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+17F0:  CLR.B   902
+17F2:  MOV.B   882,W0L
+17F4:  MOV.B   W0L,903
+17F6:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+17FA:  BSET.B  97.7
+....................                                                                       break; 
+17FC:  BRA     18E6
+....................          case(SET_C4_DATA):for(ik=0;ik<SET_C4[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C4[ik];} 
+17FE:  CLR.B   8FE
+1800:  MOV.B   8FE,W0L
+1802:  SE      W0,W0
+1804:  CP      W0,#6
+1806:  BRA     GE,1822
+1808:  MOV.B   8FE,W0L
+180A:  SE      W0,W0
+180C:  MOV     #882,W4
+180E:  ADD     W0,W4,W5
+1810:  MOV.B   8FE,W0L
+1812:  SE      W0,W0
+1814:  MOV     W0,W4
+1816:  MUL.UU  W4,#2,W0
+1818:  CALL    5A4
+181C:  MOV.B   W0L,[W5]
+181E:  INC.B   08FE
+1820:  BRA     1800
+....................                                                                       CONTA_ENVIO2=SET_C4[1];PUNT_ENV_2=1; 
+1822:  MOV.B   #6,W0L
+1824:  MOV.B   W0L,881
+1826:  MOV.B   #1,W0L
+1828:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+182A:  CLR.B   902
+182C:  MOV.B   882,W0L
+182E:  MOV.B   W0L,903
+1830:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+1834:  BSET.B  97.7
+....................                                                                       break; 
+1836:  BRA     18E6
+....................          case(SET_C5_DATA):for(ik=0;ik<SET_C5[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C5[ik];} 
+1838:  CLR.B   8FE
+183A:  MOV.B   8FE,W0L
+183C:  SE      W0,W0
+183E:  CP      W0,#6
+1840:  BRA     GE,185C
+1842:  MOV.B   8FE,W0L
+1844:  SE      W0,W0
+1846:  MOV     #882,W4
+1848:  ADD     W0,W4,W5
+184A:  MOV.B   8FE,W0L
+184C:  SE      W0,W0
+184E:  MOV     W0,W4
+1850:  MUL.UU  W4,#2,W0
+1852:  CALL    5BA
+1856:  MOV.B   W0L,[W5]
+1858:  INC.B   08FE
+185A:  BRA     183A
+....................                                                                       CONTA_ENVIO2=SET_C5[1];PUNT_ENV_2=1; 
+185C:  MOV.B   #6,W0L
+185E:  MOV.B   W0L,881
+1860:  MOV.B   #1,W0L
+1862:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1864:  CLR.B   902
+1866:  MOV.B   882,W0L
+1868:  MOV.B   W0L,903
+186A:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+186E:  BSET.B  97.7
+....................                                                                       break; 
+1870:  BRA     18E6
+....................          case(SET_C6_DATA):for(ik=0;ik<SET_C6[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C6[ik];} 
+1872:  CLR.B   8FE
+1874:  MOV.B   8FE,W0L
+1876:  SE      W0,W0
+1878:  CP      W0,#7
+187A:  BRA     GE,1896
+187C:  MOV.B   8FE,W0L
+187E:  SE      W0,W0
+1880:  MOV     #882,W4
+1882:  ADD     W0,W4,W5
+1884:  MOV.B   8FE,W0L
+1886:  SE      W0,W0
+1888:  MOV     W0,W4
+188A:  MUL.UU  W4,#2,W0
+188C:  CALL    5E6
+1890:  MOV.B   W0L,[W5]
+1892:  INC.B   08FE
+1894:  BRA     1874
+....................                                                                       CONTA_ENVIO2=SET_C6[1];PUNT_ENV_2=1; 
+1896:  MOV.B   #7,W0L
+1898:  MOV.B   W0L,881
+189A:  MOV.B   #1,W0L
+189C:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+189E:  CLR.B   902
+18A0:  MOV.B   882,W0L
+18A2:  MOV.B   W0L,903
+18A4:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+18A8:  BSET.B  97.7
+....................                                                                       break; 
+18AA:  BRA     18E6
+....................  
+....................          case(SET_C7_DATA):for(ik=0;ik<SET_C7[1];ik++){BUFFER_ENVIO_ID003[ik]=SET_C7[ik];} 
+18AC:  CLR.B   8FE
+18AE:  MOV.B   8FE,W0L
+18B0:  SE      W0,W0
+18B2:  CP      W0,#6
+18B4:  BRA     GE,18D0
+18B6:  MOV.B   8FE,W0L
+18B8:  SE      W0,W0
+18BA:  MOV     #882,W4
+18BC:  ADD     W0,W4,W5
+18BE:  MOV.B   8FE,W0L
+18C0:  SE      W0,W0
+18C2:  MOV     W0,W4
+18C4:  MUL.UU  W4,#2,W0
+18C6:  CALL    5FE
+18CA:  MOV.B   W0L,[W5]
+18CC:  INC.B   08FE
+18CE:  BRA     18AE
+....................                                                                       CONTA_ENVIO2=SET_C7[1];PUNT_ENV_2=1; 
+18D0:  MOV.B   #6,W0L
+18D2:  MOV.B   W0L,881
+18D4:  MOV.B   #1,W0L
+18D6:  MOV.B   W0L,8FA
+....................                                                                       ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+18D8:  CLR.B   902
+18DA:  MOV.B   882,W0L
+18DC:  MOV.B   W0L,903
+18DE:  CALL    14A4
+....................                                                                       enable_interrupts(int_TBE2); 
+18E2:  BSET.B  97.7
+....................                                                                       break; 
+18E4:  BRA     18E6
+....................         } 
+....................  }  
+....................  
+.................... if(SUPER_ESTADOS_ID003_MQ==NORMAL_ID003) 
+18E6:  CP0.B   880
+18E8:  BRA     NZ,1A18
+....................    {switch(ESTADOS_ID003_MQ)//lee el estado del billetero y modifica el estado de la maquina 
+....................           {case(POWER_UP_DATA[2]):ESTADOS_ID003_MQ=POWER_UP_M; 
+18EA:  MOV.B   87E,W0L
+18EC:  CLR.B   1
+18EE:  XOR     #40,W0
+18F0:  BRA     Z,1900
+18F2:  XOR     #41,W0
+18F4:  BRA     Z,190E
+18F6:  XOR     #13,W0
+18F8:  BRA     Z,1948
+18FA:  XOR     #1,W0
+18FC:  BRA     Z,19B0
+18FE:  BRA     1A18
+1900:  MOV.B   #3,W0L
+1902:  MOV.B   W0L,87E
+....................                                   SUPER_ESTADOS_ID003_MQ=INICIALIZAR; 
+1904:  MOV.B   #2,W0L
+1906:  MOV.B   W0L,880
+....................                                   ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+1908:  MOV.B   #1,W0L
+190A:  MOV.B   W0L,87E
+....................                                   break; 
+190C:  BRA     1A18
+....................            case(INTERROGAR_ESTADOS):for(ik=0;ik<ACTIVADO_TABLA[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVADO_TABLA[ik];} 
+190E:  CLR.B   8FE
+1910:  MOV.B   8FE,W0L
+1912:  SE      W0,W0
+1914:  CP      W0,#5
+1916:  BRA     GE,1932
+1918:  MOV.B   8FE,W0L
+191A:  SE      W0,W0
+191C:  MOV     #882,W4
+191E:  ADD     W0,W4,W5
+1920:  MOV.B   8FE,W0L
+1922:  SE      W0,W0
+1924:  MOV     W0,W4
+1926:  MUL.UU  W4,#2,W0
+1928:  CALL    54C
+192C:  MOV.B   W0L,[W5]
+192E:  INC.B   08FE
+1930:  BRA     1910
+....................                                     CONTA_ENVIO2=ACTIVADO_TABLA[1];PUNT_ENV_2=1; 
+1932:  MOV.B   #5,W0L
+1934:  MOV.B   W0L,881
+1936:  MOV.B   #1,W0L
+1938:  MOV.B   W0L,8FA
+....................                                     ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+193A:  CLR.B   902
+193C:  MOV.B   882,W0L
+193E:  MOV.B   W0L,903
+1940:  CALL    14A4
+....................                                     enable_interrupts(int_TBE2); 
+1944:  BSET.B  97.7
+....................                                     break; 
+1946:  BRA     1A18
+....................            case(ACTIVAR_DATA):if(ES_VEGA==1) 
+1948:  MOV     878,W4
+194A:  LSR     W4,#8,W4
+194C:  CP.B    W4L,#1
+194E:  BRA     NZ,1976
+....................                               {for(ik=0;ik<ACTIVAR_VEGA[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVAR_VEGA[ik];}} 
+1950:  CLR.B   8FE
+1952:  MOV.B   8FE,W0L
+1954:  SE      W0,W0
+1956:  CP      W0,#6
+1958:  BRA     GE,1974
+195A:  MOV.B   8FE,W0L
+195C:  SE      W0,W0
+195E:  MOV     #882,W4
+1960:  ADD     W0,W4,W5
+1962:  MOV.B   8FE,W0L
+1964:  SE      W0,W0
+1966:  MOV     W0,W4
+1968:  MUL.UU  W4,#2,W0
+196A:  CALL    5D0
+196E:  MOV.B   W0L,[W5]
+1970:  INC.B   08FE
+1972:  BRA     1952
+....................                               else{for(ik=0;ik<ACTIVAR_BILL[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVAR_BILL[ik];}} 
+1974:  BRA     199A
+1976:  CLR.B   8FE
+1978:  MOV.B   8FE,W0L
+197A:  SE      W0,W0
+197C:  CP      W0,#6
+197E:  BRA     GE,199A
+1980:  MOV.B   8FE,W0L
+1982:  SE      W0,W0
+1984:  MOV     #882,W4
+1986:  ADD     W0,W4,W5
+1988:  MOV.B   8FE,W0L
+198A:  SE      W0,W0
+198C:  MOV     W0,W4
+198E:  MUL.UU  W4,#2,W0
+1990:  CALL    6DE
+1994:  MOV.B   W0L,[W5]
+1996:  INC.B   08FE
+1998:  BRA     1978
+....................   
+....................                                     CONTA_ENVIO2=ACTIVAR_BILL[1];PUNT_ENV_2=1; 
+199A:  MOV.B   #6,W0L
+199C:  MOV.B   W0L,881
+199E:  MOV.B   #1,W0L
+19A0:  MOV.B   W0L,8FA
+....................                                     ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+19A2:  CLR.B   902
+19A4:  MOV.B   882,W0L
+19A6:  MOV.B   W0L,903
+19A8:  CALL    14A4
+....................                                     enable_interrupts(int_TBE2); 
+19AC:  BSET.B  97.7
+....................                                     break; 
+19AE:  BRA     1A18
+....................            case(DESACTIVAR_DATA):if(ES_VEGA==1) 
+19B0:  MOV     878,W4
+19B2:  LSR     W4,#8,W4
+19B4:  CP.B    W4L,#1
+19B6:  BRA     NZ,19DE
+....................                                  {for(ik=0;ik<DESACTIVAR_VEGA[1];ik++){BUFFER_ENVIO_ID003[ik]=DESACTIVAR_VEGA[ik];}} 
+19B8:  CLR.B   8FE
+19BA:  MOV.B   8FE,W0L
+19BC:  SE      W0,W0
+19BE:  CP      W0,#6
+19C0:  BRA     GE,19DC
+19C2:  MOV.B   8FE,W0L
+19C4:  SE      W0,W0
+19C6:  MOV     #882,W4
+19C8:  ADD     W0,W4,W5
+19CA:  MOV.B   8FE,W0L
+19CC:  SE      W0,W0
+19CE:  MOV     W0,W4
+19D0:  MUL.UU  W4,#2,W0
+19D2:  CALL    6C8
+19D6:  MOV.B   W0L,[W5]
+19D8:  INC.B   08FE
+19DA:  BRA     19BA
+....................                                  else{for(ik=0;ik<DESACTIVAR_BILL[1];ik++){BUFFER_ENVIO_ID003[ik]=DESACTIVAR_BILL[ik];}}                        
+19DC:  BRA     1A02
+19DE:  CLR.B   8FE
+19E0:  MOV.B   8FE,W0L
+19E2:  SE      W0,W0
+19E4:  CP      W0,#6
+19E6:  BRA     GE,1A02
+19E8:  MOV.B   8FE,W0L
+19EA:  SE      W0,W0
+19EC:  MOV     #882,W4
+19EE:  ADD     W0,W4,W5
+19F0:  MOV.B   8FE,W0L
+19F2:  SE      W0,W0
+19F4:  MOV     W0,W4
+19F6:  MUL.UU  W4,#2,W0
+19F8:  CALL    5FE
+19FC:  MOV.B   W0L,[W5]
+19FE:  INC.B   08FE
+1A00:  BRA     19E0
+....................  
+....................                                     CONTA_ENVIO2=DESACTIVAR_BILL[1];PUNT_ENV_2=1; 
+1A02:  MOV.B   #6,W0L
+1A04:  MOV.B   W0L,881
+1A06:  MOV.B   #1,W0L
+1A08:  MOV.B   W0L,8FA
+....................                                     ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1A0A:  CLR.B   902
+1A0C:  MOV.B   882,W0L
+1A0E:  MOV.B   W0L,903
+1A10:  CALL    14A4
+....................                                     enable_interrupts(int_TBE2); 
+1A14:  BSET.B  97.7
+....................                                     break; 
+1A16:  BRA     1A18
+....................           } 
+....................  
+....................    } 
+....................  
+.................... if(SUPER_ESTADOS_ID003_MQ==BILLETE_ID003)//RECIBE DE BILL 
+1A18:  MOV     880,W4
+1A1A:  CP.B    W4L,#1
+1A1C:  BRA     NZ,1AE4
+....................    {switch(ESTADOS_ID003_MQ) 
+....................            {case(INTERROGAR_ESTADOS):for(ik=0;ik<ACTIVADO_TABLA[1];ik++){BUFFER_ENVIO_ID003[ik]=ACTIVADO_TABLA[ik];} 
+1A1E:  MOV.B   87E,W0L
+1A20:  CLR.B   1
+1A22:  XOR     #1,W0
+1A24:  BRA     Z,1A30
+1A26:  XOR     #17,W0
+1A28:  BRA     Z,1A6A
+1A2A:  XOR     #1,W0
+1A2C:  BRA     Z,1AA4
+1A2E:  BRA     1AE4
+1A30:  CLR.B   8FE
+1A32:  MOV.B   8FE,W0L
+1A34:  SE      W0,W0
+1A36:  CP      W0,#5
+1A38:  BRA     GE,1A54
+1A3A:  MOV.B   8FE,W0L
+1A3C:  SE      W0,W0
+1A3E:  MOV     #882,W4
+1A40:  ADD     W0,W4,W5
+1A42:  MOV.B   8FE,W0L
+1A44:  SE      W0,W0
+1A46:  MOV     W0,W4
+1A48:  MUL.UU  W4,#2,W0
+1A4A:  CALL    54C
+1A4E:  MOV.B   W0L,[W5]
+1A50:  INC.B   08FE
+1A52:  BRA     1A32
+....................                                                                          CONTA_ENVIO2=ACTIVADO_TABLA[1];PUNT_ENV_2=1; 
+1A54:  MOV.B   #5,W0L
+1A56:  MOV.B   W0L,881
+1A58:  MOV.B   #1,W0L
+1A5A:  MOV.B   W0L,8FA
+....................                                                                          ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1A5C:  CLR.B   902
+1A5E:  MOV.B   882,W0L
+1A60:  MOV.B   W0L,903
+1A62:  CALL    14A4
+....................                                                                          enable_interrupts(int_TBE2); 
+1A66:  BSET.B  97.7
+....................                                                                          break; 
+1A68:  BRA     1AE4
+....................             case(ORDEN_ESTAKAR_ID003):for(ik=0;ik<ORDEN_PASAR[1];ik++){BUFFER_ENVIO_ID003[ik]=ORDEN_PASAR[ik];} 
+1A6A:  CLR.B   8FE
+1A6C:  MOV.B   8FE,W0L
+1A6E:  SE      W0,W0
+1A70:  CP      W0,#5
+1A72:  BRA     GE,1A8E
+1A74:  MOV.B   8FE,W0L
+1A76:  SE      W0,W0
+1A78:  MOV     #882,W4
+1A7A:  ADD     W0,W4,W5
+1A7C:  MOV.B   8FE,W0L
+1A7E:  SE      W0,W0
+1A80:  MOV     W0,W4
+1A82:  MUL.UU  W4,#2,W0
+1A84:  CALL    538
+1A88:  MOV.B   W0L,[W5]
+1A8A:  INC.B   08FE
+1A8C:  BRA     1A6C
+....................                                                                          CONTA_ENVIO2=ORDEN_PASAR[1];PUNT_ENV_2=1; 
+1A8E:  MOV.B   #5,W0L
+1A90:  MOV.B   W0L,881
+1A92:  MOV.B   #1,W0L
+1A94:  MOV.B   W0L,8FA
+....................                                                                          ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1A96:  CLR.B   902
+1A98:  MOV.B   882,W0L
+1A9A:  MOV.B   W0L,903
+1A9C:  CALL    14A4
+....................                                                                          enable_interrupts(int_TBE2); 
+1AA0:  BSET.B  97.7
+....................                                                                          break; 
+1AA2:  BRA     1AE4
+....................             case(CONTESTAR_ACK_ID003):ESTADOS_ID003_MQ=INTERROGAR_ESTADOS; 
+1AA4:  MOV.B   #1,W0L
+1AA6:  MOV.B   W0L,87E
+....................                                       for(ik=0;ik<ACK_1[1];ik++){BUFFER_ENVIO_ID003[ik]=ACK_1[ik];} 
+1AA8:  CLR.B   8FE
+1AAA:  MOV.B   8FE,W0L
+1AAC:  SE      W0,W0
+1AAE:  CP      W0,#5
+1AB0:  BRA     GE,1ACC
+1AB2:  MOV.B   8FE,W0L
+1AB4:  SE      W0,W0
+1AB6:  MOV     #882,W4
+1AB8:  ADD     W0,W4,W5
+1ABA:  MOV.B   8FE,W0L
+1ABC:  SE      W0,W0
+1ABE:  MOV     W0,W4
+1AC0:  MUL.UU  W4,#2,W0
+1AC2:  CALL    6B4
+1AC6:  MOV.B   W0L,[W5]
+1AC8:  INC.B   08FE
+1ACA:  BRA     1AAA
+....................                                                                          CONTA_ENVIO2=ACK_1[1];PUNT_ENV_2=1; 
+1ACC:  MOV.B   #5,W0L
+1ACE:  MOV.B   W0L,881
+1AD0:  MOV.B   #1,W0L
+1AD2:  MOV.B   W0L,8FA
+....................                                                                          ENVIAR_U2(0,BUFFER_ENVIO_ID003[0]); 
+1AD4:  CLR.B   902
+1AD6:  MOV.B   882,W0L
+1AD8:  MOV.B   W0L,903
+1ADA:  CALL    14A4
+....................                                                                          enable_interrupts(int_TBE2); 
+1ADE:  BSET.B  97.7
+....................                                                                          break; 
+1AE0:  BRA     1AE4
+....................                                       break; 
+1AE2:  BRA     1AE4
+....................                                        
+....................  
+....................             } 
+....................  
+....................    } 
+....................  
+....................  
+.................... } 
+1AE4:  MOV     [--W15],W5
+1AE6:  RETURN  
+.................... // 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //PROCESO DE ACTIVACION SE USA ACTIVATE_BILL REGISTRO EN 1 ACTIVADO CUANDO 
+.................... //PREGUNTO ESTADOS SI NO CORRESPONDE CON ACTIVATE  ORDENA ACTIVAR O DESACTIVAR 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+....................  
+.................... #use      delay(clock=32000000) 
+.................... #fuses    NOJTAG,NOWDT,PROTECT,WRT,NODEBUG,XT,PR_PLL 
+....................  
+.................... #pin_select U2TX  = PIN_B5 //COMUNICACION CON BV 
+.................... #pin_select U2RX  = PIN_B8 //COMUNICACION CON BV 
+.................... #pin_select U1TX  = PIN_B4  //COMUNICACION CON MAQUINA 
+.................... #pin_select U1RX  = PIN_B7  //COMUNICACION CON MAQUINA 
+....................  
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... #INT_ADDRERR 
+.................... void isr_TRAP () 
+.................... {while(1){#asm 
+*
+06F4:  PUSH    42
+06F6:  PUSH    36
+06F8:  MOV     W0,[W15++]
+06FA:  MOV     #2,W0
+06FC:  REPEAT  #C
+06FE:  MOV     [W0++],[W15++]
+....................           reset 
+0700:  RESET   
+....................           #endasm}   
+0702:  BRA     700
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //PARA EL CONTEO DE ESPACIO INTERTRAMA 
+.................... //setup_timer3((TMR_INTERNAL | TMR_DIV_BY_64),0xFFFA); 2.56MS 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+0704:  BCLR.B  80.3
+0706:  MOV     #1A,W0
+0708:  REPEAT  #C
+070A:  MOV     [--W15],[W0--]
+070C:  MOV     [--W15],W0
+070E:  POP     36
+0710:  POP     42
+0712:  RETFIE  
+.................... #int_TIMER2 LEVEL=5 
+.................... void isr_timer2 () 
+.................... {char MOLEX=0; 
+*
+1108:  PUSH    42
+110A:  PUSH    36
+110C:  MOV     W0,[W15++]
+110E:  MOV     #2,W0
+1110:  REPEAT  #C
+1112:  MOV     [W0++],[W15++]
+1114:  CLR.B   8FE
+....................  T2ON=0; 
+1116:  BCLR.B  111.7
+....................  disable_interrupts(int_TIMER2); 
+1118:  BCLR.B  94.7
+....................  LISTO_BUFFER_ID024(); 
+111A:  CALL    1044
+....................  CONTAOR_BYTES_ID024=0; 
+111E:  CLR.B   811
+....................  output_low(VISUAL_C); 
+1120:  BCLR.B  2CC.0
+....................  set_timer2(0); 
+1122:  CLR     106
+....................  for(MOLEX=0;MOLEX<10;MOLEX++){BUFFER_ID024_RX[MOLEX]=200;} 
+1124:  CLR.B   8FE
+1126:  MOV.B   8FE,W0L
+1128:  SE      W0,W0
+112A:  CP      W0,#A
+112C:  BRA     GE,113E
+112E:  MOV.B   8FE,W0L
+1130:  SE      W0,W0
+1132:  MOV     #812,W4
+1134:  ADD     W0,W4,W5
+1136:  MOV.B   #C8,W0L
+1138:  MOV.B   W0L,[W5]
+113A:  INC.B   08FE
+113C:  BRA     1126
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //COMUNICACION CON MAQUINA ID024 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+113E:  BCLR.B  84.7
+1140:  MOV     #1A,W0
+1142:  REPEAT  #C
+1144:  MOV     [--W15],[W0--]
+1146:  MOV     [--W15],W0
+1148:  POP     36
+114A:  POP     42
+114C:  RETFIE  
+.................... #int_RDA   LEVEL=5 
+.................... void serial_isr() 
+.................... {int16 FG=0;char RXREG1; 
+114E:  PUSH    42
+1150:  PUSH    36
+1152:  MOV     W0,[W15++]
+1154:  MOV     #2,W0
+1156:  REPEAT  #C
+1158:  MOV     [W0++],[W15++]
+115A:  CLR     8FE
+....................  FG=U1RXREG; 
+115C:  PUSH    226
+115E:  POP     8FE
+....................  RXREG1=make8(FG,0); 
+1160:  MOV.B   8FE,W0L
+1162:  MOV.B   W0L,900
+....................  output_high(VISUAL_C);  
+1164:  BSET.B  2CC.0
+....................   
+....................  BUFFER_ID024_RX[CONTAOR_BYTES_ID024]=RXREG1; 
+1166:  MOV.B   811,W0L
+1168:  SE      W0,W0
+116A:  MOV     #812,W4
+116C:  ADD     W0,W4,W5
+116E:  MOV.B   900,W0L
+1170:  MOV.B   W0L,[W5+#0]
+....................  CONTAOR_BYTES_ID024++; 
+1172:  INC.B   0811
+....................   
+....................  
+....................  if(CONTAOR_BYTES_ID024>50){CONTAOR_BYTES_ID024=0;} 
+1174:  MOV.B   811,W0L
+1176:  SE      W0,W0
+1178:  MOV     #32,W4
+117A:  CP      W4,W0
+117C:  BRA     GE,1180
+117E:  CLR.B   811
+....................  
+....................  clear_interrupt(int_TIMER2); 
+1180:  BCLR.B  84.7
+....................  if(CONTAOR_BYTES_ID024==1){set_timer2(0);T2ON=1;enable_interrupts(int_TIMER2);}  
+1182:  MOV.B   811,W0L
+1184:  SE      W0,W0
+1186:  CP      W0,#1
+1188:  BRA     NZ,1190
+118A:  CLR     106
+118C:  BSET.B  111.7
+118E:  BSET.B  94.7
+....................  
+....................  if(U1OERR){U1OERR=0;} 
+1190:  BTSS.B  222.1
+1192:  BRA     1196
+1194:  BCLR.B  222.1
+.................... } 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //BUFFER_EMPTY 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+1196:  BCLR.B  85.3
+1198:  MOV     #1A,W0
+119A:  REPEAT  #C
+119C:  MOV     [--W15],[W0--]
+119E:  MOV     [--W15],W0
+11A0:  POP     36
+11A2:  POP     42
+11A4:  RETFIE  
+.................... #int_TBE LEVEL=5 
+.................... void isr_TBE() 
+.................... {char MOLEX=0; 
+11A6:  BCLR.B  85.4
+11A8:  PUSH    42
+11AA:  PUSH    36
+11AC:  MOV     W0,[W15++]
+11AE:  MOV     #2,W0
+11B0:  REPEAT  #C
+11B2:  MOV     [W0++],[W15++]
+11B4:  CLR.B   8FE
+....................  MOLEX=BUFER_ENVIO_ID024[PUNT_ENV_ID024]; 
+11B6:  MOV.B   86E,W0L
+11B8:  SE      W0,W0
+11BA:  MOV     #832,W4
+11BC:  ADD     W0,W4,W0
+11BE:  MOV     8FE,W4
+11C0:  MOV.B   [W0+#0],W4L
+11C2:  MOV     W4,8FE
+....................  ENVIAR_U1(0,MOLEX); 
+11C4:  CLR.B   91C
+11C6:  MOV.B   8FE,W0L
+11C8:  MOV.B   W0L,91D
+11CA:  CALL    714
+....................  PUNT_ENV_ID024++; 
+11CE:  INC.B   086E
+....................  if(PUNT_ENV_ID024==BYTES_A_ENVIAR_ID024) 
+11D0:  MOV.B   86E,W0L
+11D2:  CP.B    86F
+11D4:  BRA     NZ,11DA
+....................    {disable_interrupts(int_TBE); 
+11D6:  BCLR.B  95.4
+....................     enable_interrupts(int_RDA); 
+11D8:  BSET.B  95.3
+....................    }  
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //COMUNICACION CON BILLETERO RECEPCION ID003 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+11DA:  MOV     #1A,W0
+11DC:  REPEAT  #C
+11DE:  MOV     [--W15],[W0--]
+11E0:  MOV     [--W15],W0
+11E2:  POP     36
+11E4:  POP     42
+11E6:  RETFIE  
+.................... #int_RDA2   LEVEL=5 
+.................... void isr_int_RDA2() 
+.................... {int FG=0;char RXREG2; 
+*
+1408:  PUSH    42
+140A:  PUSH    36
+140C:  MOV     W0,[W15++]
+140E:  MOV     #2,W0
+1410:  REPEAT  #C
+1412:  MOV     [W0++],[W15++]
+1414:  CLR     8FE
+....................  FG=U2RXREG;  
+1416:  PUSH    236
+1418:  POP     8FE
+....................  RXREG2=make8(FG,0); 
+141A:  MOV.B   8FE,W0L
+141C:  MOV.B   W0L,900
+....................  
+....................  CONTAOR_BYTES_U2++; 
+141E:  INC.B   08FB
+....................  if(CONTAOR_BYTES_U2>55){CONTAOR_BYTES_U2=0X00; 
+1420:  MOV.B   8FB,W0L
+1422:  SE      W0,W0
+1424:  MOV     #37,W4
+1426:  CP      W4,W0
+1428:  BRA     GE,142E
+142A:  CLR.B   8FB
+....................                          BANDER_BUFFER_INU2=0;} 
+142C:  CLR.B   8FC
+....................  
+....................  if(BANDER_BUFFER_INU2=0){if(RXREG2==0XFC) 
+142E:  CLR.B   8FC
+1430:  CP0.B   8FC
+1432:  BRA     Z,1446
+1434:  MOV.B   900,W0L
+1436:  SE      W0,W0
+1438:  MOV     #FC,W4
+143A:  CP      W4,W0
+143C:  BRA     NZ,1446
+....................                             {CONTAOR_BYTES_U2=0X01; 
+143E:  MOV.B   #1,W0L
+1440:  MOV.B   W0L,8FB
+....................                              BANDER_BUFFER_INU2=1;}                         
+1442:  MOV.B   #1,W0L
+1444:  MOV.B   W0L,8FC
+....................                          } 
+....................  
+.................... BUFFER_RX_ID003[CONTAOR_BYTES_U2]=RXREG2;   
+1446:  MOV.B   8FB,W0L
+1448:  SE      W0,W0
+144A:  MOV     #8B4,W4
+144C:  ADD     W0,W4,W5
+144E:  MOV.B   900,W0L
+1450:  MOV.B   W0L,[W5+#0]
+....................  
+.................... if(BUFFER_RX_ID003[2]==CONTAOR_BYTES_U2) {LISTO_BUFFER_ID003(); 
+1452:  MOV.B   8B6,W0L
+1454:  CP.B    8FB
+1456:  BRA     NZ,145E
+1458:  CALL    11E8
+....................                                           output_toggle(VISUAL_B);} 
+145C:  BTG.B   2C4.1
+....................  
+....................  
+....................  if(U2OERR){U2OERR=0;} 
+145E:  BTSS.B  232.1
+1460:  BRA     1464
+1462:  BCLR.B  232.1
+....................   
+....................  //ENVIAR_U1(0,FG); 
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //1.048SEGUNDOS LLAMAR A RUTINAS REACTIVAR ENVIOS  
+.................... //LATENCIA 3 SEGUNDOS 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+1464:  BCLR.B  87.6
+1466:  MOV     #1A,W0
+1468:  REPEAT  #C
+146A:  MOV     [--W15],[W0--]
+146C:  MOV     [--W15],W0
+146E:  POP     36
+1470:  POP     42
+1472:  RETFIE  
+.................... #int_TIMER3 LEVEL=5 
+.................... void isr_TIMER3() 
+.................... {static char MOLEX=0; 
+*
+1B16:  PUSH    42
+1B18:  PUSH    36
+1B1A:  MOV     W0,[W15++]
+1B1C:  MOV     #2,W0
+1B1E:  REPEAT  #C
+1B20:  MOV     [W0++],[W15++]
+....................  MOLEX++; 
+1B22:  INC.B   08FD
+....................  if(MOLEX==2){TEMPO_ID003();MOLEX=0;} 
+1B24:  MOV.B   8FD,W0L
+1B26:  SE      W0,W0
+1B28:  CP      W0,#2
+1B2A:  BRA     NZ,1B32
+1B2C:  CALL    14B6
+1B30:  CLR.B   8FD
+....................  TEMPO_ID024(); 
+1B32:  CALL    1AE8
+.................... // DOSIF++; 
+.................... // if(DOSIF==100&&FLAGET==0){DOSIF=0;FLAGET=1; 
+.................... //               BUFFER_BILLETES[0]=5;BUFFER_BILLETES[1]=5; 
+.................... //	           } 
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //BUFFER_EMPTY 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+1B36:  BCLR.B  85.0
+1B38:  MOV     #1A,W0
+1B3A:  REPEAT  #C
+1B3C:  MOV     [--W15],[W0--]
+1B3E:  MOV     [--W15],W0
+1B40:  POP     36
+1B42:  POP     42
+1B44:  RETFIE  
+.................... #int_TBE2 LEVEL=5 
+.................... void isr_TBE2() 
+.................... {char MOLEX=0;  if(PUNT_ENV_2==BUFFER_ENVIO_ID003[1]){disable_interrupts(int_TBE2); 
+1B46:  BCLR.B  87.7
+1B48:  PUSH    42
+1B4A:  PUSH    36
+1B4C:  MOV     W0,[W15++]
+1B4E:  MOV     #2,W0
+1B50:  REPEAT  #C
+1B52:  MOV     [W0++],[W15++]
+1B54:  CLR.B   8FE
+1B56:  MOV.B   8FA,W0L
+1B58:  CP.B    883
+1B5A:  BRA     NZ,1B64
+1B5C:  BCLR.B  97.7
+....................                                        CONTAOR_BYTES_U2=0X00; 
+1B5E:  CLR.B   8FB
+....................                                        BANDER_BUFFER_INU2=0;} 
+1B60:  CLR.B   8FC
+....................  else {ENVIAR_U2(0,BUFFER_ENVIO_ID003[PUNT_ENV_2]);} 
+1B62:  BRA     1B78
+1B64:  MOV.B   8FA,W0L
+1B66:  SE      W0,W0
+1B68:  MOV     #882,W4
+1B6A:  ADD     W0,W4,W0
+1B6C:  MOV.B   [W0],W5L
+1B6E:  CLR.B   902
+1B70:  MOV.B   W5L,W0L
+1B72:  MOV.B   W0L,903
+1B74:  CALL    14A4
+....................  PUNT_ENV_2++; 
+1B78:  INC.B   08FA
+.................... } 
+....................  
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxXX 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxXX 
+....................  
+1B7A:  MOV     #1A,W0
+1B7C:  REPEAT  #C
+1B7E:  MOV     [--W15],[W0--]
+1B80:  MOV     [--W15],W0
+1B82:  POP     36
+1B84:  POP     42
+1B86:  RETFIE  
+.................... #int_TIMER1 LEVEL=5 
+.................... void isr_timer1 () 
+.................... { 
+1B88:  PUSH    42
+1B8A:  PUSH    36
+1B8C:  MOV     W0,[W15++]
+1B8E:  MOV     #2,W0
+1B90:  REPEAT  #C
+1B92:  MOV     [W0++],[W15++]
+.................... } 
+....................  
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+.................... //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 
+....................  
+1B94:  BCLR.B  84.3
+1B96:  MOV     #1A,W0
+1B98:  REPEAT  #C
+1B9A:  MOV     [--W15],[W0--]
+1B9C:  MOV     [--W15],W0
+1B9E:  POP     36
+1BA0:  POP     42
+1BA2:  RETFIE  
+.................... void main(void)  
+.................... { 
+*
+1C20:  MOV     #5444,W0
+1C22:  MOV     W0,A4
+1C24:  MOV     #5444,W0
+1C26:  MOV     W0,A6
+1C28:  MOV     #5445,W0
+1C2A:  MOV     W0,A8
+1C2C:  MOV     #4445,W0
+1C2E:  MOV     W0,AA
+1C30:  MOV     #5544,W0
+1C32:  MOV     W0,B2
+1C34:  BSET.B  81.7
+1C36:  MOV     #46,W0
+1C38:  MOV.B   0,W0L
+1C3A:  MOV     #57,W0
+1C3C:  MOV.B   0,W0L
+1C3E:  BCLR.B  742.6
+1C40:  MOV     #1F07,W0
+1C42:  MOV     W0,6A4
+1C44:  MOV     #1F08,W0
+1C46:  MOV     W0,6A6
+1C48:  MOV     #503,W0
+1C4A:  MOV     W0,6C4
+1C4C:  MOV     #46,W0
+1C4E:  MOV.B   W0L,742
+1C50:  MOV     #57,W0
+1C52:  MOV.B   W0L,742
+1C54:  BSET.B  742.6
+1C56:  CLR.B   801
+1C58:  CLR.B   802
+1C5A:  CLR.B   803
+1C5C:  CLR.B   804
+1C5E:  CLR.B   805
+1C60:  CLR.B   806
+1C62:  CLR.B   807
+1C64:  CLR.B   80A
+1C66:  CLR.B   80B
+1C68:  CLR.B   80C
+1C6A:  CLR.B   80D
+1C6C:  CLR     80E
+1C6E:  MOV.B   #B,W0L
+1C70:  MOV.B   W0L,811
+1C72:  CLR.B   86E
+1C74:  CLR.B   86F
+1C76:  MOV.B   #2,W0L
+1C78:  MOV.B   W0L,870
+1C7A:  CLR.B   871
+1C7C:  CLR.B   872
+1C7E:  CLR.B   873
+1C80:  CLR.B   874
+1C82:  CLR.B   875
+1C84:  MOV.B   #FF,W0L
+1C86:  MOV.B   W0L,879
+1C88:  CLR.B   87A
+1C8A:  CLR.B   87C
+1C8C:  CLR.B   87D
+1C8E:  MOV.B   #1,W0L
+1C90:  MOV.B   W0L,87E
+1C92:  CLR.B   87F
+1C94:  MOV.B   #2,W0L
+1C96:  MOV.B   W0L,880
+1C98:  CLR.B   881
+1C9A:  CLR.B   8FA
+1C9C:  CLR.B   8FB
+1C9E:  CLR.B   8FC
+1CA0:  CLR.B   8FD
+1CA2:  SETM    32C
+1CA4:  MOV     #2780,W15
+1CA6:  MOV     #27FF,W0
+1CA8:  MOV     W0,20
+1CAA:  NOP     
+1CAC:  BRA     1CE4
+1CAE:  DATA    80,02,08
+1CB0:  DATA    08,00,00
+1CB2:  DATA    80,0B,08
+1CB4:  DATA    12,09,74
+1CB6:  DATA    08,FF,F1
+1CB8:  DATA    FF,CC,61
+1CBA:  DATA    12,58,73
+1CBC:  DATA    40,51,00
+1CBE:  DATA    80,03,08
+1CC0:  DATA    76,00,00
+1CC2:  DATA    00,C0,78
+1CC4:  DATA    08,82,00
+1CC6:  DATA    00,00,00
+1CC8:  INC     W2,W2
+1CCA:  CP      W2,#1
+1CCC:  BRA     NZ,1CD6
+1CCE:  TBLRDL  [W1],W3
+1CD0:  TBLRDH  [W1++],W4
+1CD2:  MOV.B   6,W0L
+1CD4:  RETURN  
+1CD6:  CP      W2,#2
+1CD8:  BRA     NZ,1CDE
+1CDA:  MOV.B   7,W0L
+1CDC:  RETURN  
+1CDE:  MOV.B   8,W0L
+1CE0:  CLR     W2
+1CE2:  RETURN  
+1CE4:  MOV     #0,W6
+1CE6:  MOV     #0,W0
+1CE8:  MOV     W0,32
+1CEA:  MOV     #1CAE,W0
+1CEC:  MOV     W0,W1
+1CEE:  CLR     W2
+1CF0:  CALL    1CC8
+1CF4:  MOV.B   W0L,B
+1CF6:  CALL    1CC8
+1CFA:  MOV.B   W0L,A
+1CFC:  CP0     W5
+1CFE:  BRA     Z,1D32
+1D00:  BTSS    W5.F
+1D02:  BRA     1D12
+1D04:  CALL    1CC8
+1D08:  MOV.B   W0L,D
+1D0A:  CALL    1CC8
+1D0E:  MOV.B   W0L,C
+1D10:  BCLR    W5.F
+1D12:  BTSS    W5.E
+1D14:  BRA     1D26
+1D16:  BCLR    W5.E
+1D18:  DEC     W5,W5
+1D1A:  CALL    1CC8
+1D1E:  MOV.B   W0L,W7L
+1D20:  REPEAT  W5
+1D22:  MOV.B   W7L,[W6++]
+1D24:  BRA     1CF0
+1D26:  CALL    1CC8
+1D2A:  MOV.B   W0L,[W6++]
+1D2C:  DEC     W5,W5
+1D2E:  BRA     NZ,1D26
+1D30:  BRA     1CF0
+....................  
+....................  
+.................... CONFIG_PORTS(); 
+1D32:  CALL    1BB4
+....................  
+.................... //LISTO_BUFFER_ID024(); 
+....................  
+....................  
+....................  enable_interrupts(INT_TIMER3)  ; 
+1D36:  BSET.B  95.0
+....................  T2ON=0;set_timer2(0); 
+1D38:  BCLR.B  111.7
+1D3A:  CLR     106
+....................  clear_interrupt(int_TIMER2); 
+1D3C:  BCLR.B  84.7
+....................  disable_interrupts(INT_TIMER2) ; 
+1D3E:  BCLR.B  94.7
+....................  enable_interrupts(INT_TIMER1)  ; 
+1D40:  BSET.B  94.3
+....................  enable_interrupts(INT_RDA)     ; 
+1D42:  BSET.B  95.3
+....................  enable_interrupts(INT_RDA2)    ; 
+1D44:  BSET.B  97.6
+....................  enable_interrupts(INTR_GLOBAL) ; 
+1D46:  BCLR.B  81.7
+1D48:  CLR     42
+1D4A:  BSET.B  81.7
+....................  
+.................... T2ON=1;set_timer2(0);  
+1D4C:  BSET.B  111.7
+1D4E:  CLR     106
+.................... enable_interrupts(INT_TIMER2) ; 
+1D50:  BSET.B  94.7
+....................  
+....................  
+....................  while(1) 
+....................     {if(!RIDLE1){set_timer2(0);} 
+1D52:  BTSC.B  222.4
+1D54:  BRA     1D58
+1D56:  CLR     106
+....................     } 
+1D58:  BRA     1D52
+....................  
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+.................... //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 
+....................  
+....................  
+....................  
+....................  
+.................... } 
+.................... //CAMBIO DEL 15 DICIEMBRE PARA PROCESAR EL FIN DE TRAMA ATRAVEZ DE CONTEO DE 
+.................... //BYTES Y COMPARACION CON EL CAMPO DE NUMERO DE BYTES Y TAMBIEN CON 
+.................... //LOS TRES BYTES FE CUALQUIERA DE LAS CONDICIONES QUE SE DETECTE 
+1D5A:  PWRSAV  #0
+
+Configuration Fuses:
+   Word  1L: 0F7F   WPOSTS16 WDT128 WINDIS NOWDT ICSP1 NODEBUG WRT PROTECT NOJTAG
+          H: FF00  
+   Word  2L: FBF5   XT I2C1SELD IOL1WAY NOOSCIO PR_PLL SOSC_SEC WUT_DEFAULT IESO
+          H: FF00  
